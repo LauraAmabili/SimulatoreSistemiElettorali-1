@@ -12,7 +12,6 @@ for (_, name, _) in pkgutil.iter_modules([os.path.dirname(__file__)]):
     for i in class_name:
         classe = getattr(imported_module, i)
         if issubclass(classe, type):
-            print(classe.__name__)
             setattr(sys.modules[__name__], classe.__name__, classe)
 
 del i, classe, class_name, imported_module, name, os, pkgutil, importlib, sys, _    # Per evitare confusione nel

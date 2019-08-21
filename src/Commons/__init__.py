@@ -12,7 +12,6 @@ for (_, name, _) in pkgutil.iter_modules([os.path.dirname(__file__)]):
     for i in class_name:
         oggetto = getattr(imported_module, i)
         if inspect.isclass(oggetto) or inspect.isfunction(oggetto):
-            print(oggetto.__name__)
             setattr(sys.modules[__name__], oggetto.__name__, oggetto)
 
 del i, oggetto, class_name, imported_module, name, os, pkgutil, importlib, sys, _, inspect  # Per evitare confusione nel
