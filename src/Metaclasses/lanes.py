@@ -25,7 +25,7 @@ class lane_head(type):
     """
     def __new__(cls, *args, lane_head, **kwargs):
 
-        # Funzione start_lane()
+        # Funzione start_lane('lane')
 
         # Funzione is_lane_endpoint('lane') (controlla che la funzione non esista già, nel caso decorala e basta)
 
