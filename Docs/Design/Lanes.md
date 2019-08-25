@@ -33,3 +33,5 @@ To recap in the hub I will have:
 + Starting point of the lane
 + End point of the lane
 + For each endpoint the list of associated representatives
+
+The function start_lane must return a list of the candidates receiving a proposal.

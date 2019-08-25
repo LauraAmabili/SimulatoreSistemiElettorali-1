@@ -54,6 +54,9 @@ class Hub:
         else:
             raise KeyError("No such register")
 
+    def getLaneOrder(self):
+        pass
+
 
 class HubBuilder:
     def __init__(self):
