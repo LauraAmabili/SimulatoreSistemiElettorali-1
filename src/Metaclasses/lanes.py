@@ -14,6 +14,11 @@ sub1.sub2. ... .subT::Target, questa notazione si traduce in:
     > Se l'uninominale fosse una lane che inizia in Nazione e ha solo Uninominale sarebbe:
     > circoscrizioni.plurinominali.uninominali::Uninominale
 """
+# TODO: the lane process starting in the lane_head should return a list of strings where the strings are the identifiers
+    # of the candidates which received a proposal by the lane
+    # the lane should also, as an intentional side effect, provide each proposed candidate with the information it needs
+    # to make a choice and to pass down the choice
+
 
 class lane_head(type):
     """

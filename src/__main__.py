@@ -88,7 +88,7 @@ if __name__ == '__main__':
                     hub.getClass(k).__call__(e[k])
 
     csvs = list(filter(lambda x: x[-4:] == '.csv', files))
-    for i in idfs:
+    for i in csvs:
         classe = i[:-4]
         insts = hub.getInstances(classe)
         with open(i, 'r') as f:
@@ -111,7 +111,7 @@ if __name__ == '__main__':
         # In teoria quando arriva qui vuol dire che tutti i processi hanno terminato
         for c in candidati_con_proposte:
             candidati_con_proposte.remove(c)
-            candidati_con_proposte.update(hub.getCandidates(c).pick_spot()) # TODO: pick_spot restituisce una lista che indica quali altri
+            candidati_con_proposte.update(hub.getCandidate(c).pick_spot()) # TODO: pick_spot restituisce una lista che indica quali altri
                                                                         # candidati sono da controllare
 
     Represent.represent(hub.elected())
