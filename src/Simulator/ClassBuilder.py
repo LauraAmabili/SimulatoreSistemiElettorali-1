@@ -73,12 +73,12 @@ class HubBuilder:
         :return: A class of type a temporary metaclass created by inheriting from all the bases
         """
         class cleanupMeta(type):
-            def __new__(cls, *args, **kwargs):
+            def __new__(cls, *args, **ks):
                 return super().__new__(cls, *args)
 
         bases.append(cleanupMeta)
         metaclass = type('combined', bases, {})
-        return metaclass(name, (), **kwargs)
+        return metaclass(name, (), {}, **kwargs)
 
     @staticmethod
     def buildHub(config, dict_metas, dict_commons):

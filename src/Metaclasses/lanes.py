@@ -15,11 +15,35 @@ sub1.sub2. ... .subT::Target, questa notazione si traduce in:
     > circoscrizioni.plurinominali.uninominali::Uninominale
 """
 # TODO: the lane process starting in the lane_head should return a set of strings where the strings are the identifiers
-    # of the candidates which received a proposal by the lane
-    # the lane should also, as an intentional side effect, provide each proposed candidate with the information it needs
-    # to make a choice and to pass down the choice
+# of the candidates which received a proposal by the lane
+# the lane should also, as an intentional side effect, provide each proposed candidate with the information it needs
+# to make a choice and to pass down the choice
+
 import itertools
 from functools import partial
+
+
+class FuncList:
+    """
+    Starts with a list of functions, on call it will apply the argument to the first function,
+    then the result to the second and so on
+    """
+
+    def __init__(self, funcs):
+        self.functions = funcs
+
+    def __call__(self, val):
+        r = val
+        for i in self.functions:
+            r = i(r)
+        return r
+
+
+def gen_func(path):  # var1.var2..
+    lis = []
+    for i, n in enumerate(path.split('.')):
+        lis.append(partial(lambda ns, ls: list(itertools.chain(*map(lambda t: getattr(t, ns, None), ls))), n))
+    return FuncList(lis)
 
 
 class lane_head(type):
@@ -30,7 +54,8 @@ class lane_head(type):
     Il punto di partenza della Lane, per esempio nazione. Salvato in hub
     Sa solo correggere le proposte ottenute e calcolare un exact_value
     """
-    def __new__(cls, *args, lane_head, **kwargs):
+
+    def __new__(cls, *args, lane_head_args, **kwargs):
         """
         I parametri sono in lane_head ed è un dizionario
         del tipo:
@@ -48,44 +73,46 @@ class lane_head(type):
                 :: caller, lane, subdivisions, ideal distribution -> candidati che hanno ricevuto una proposta
         """
 
-        #Step 1: flip the arguments
+        # Step 1: flip the arguments
         params = dict()
-        for l_n,ps in lane_head.items():
+        for l_n, ps in lane_head_args.items():
             for k in ps:
                 if k not in params:
-                    params[k]=dict()
+                    params[k] = dict()
                 params[k][l_n] = ps[k]
 
-        # Funzione is_lane_endpoint('lane') (controlla che la funzione non esista già, nel caso decorala e basta)
-        def func(self,lane_n):
-            return False
+        # ----------------------- is_lane_endpoint(lane)
+        # > Create a default
+        old_endpoint = args[2].get('is_lane_endpoint', lambda *s, **kargs: False)
 
-        if 'is_lane_endpoint' in args[2]:
-            func = args[2]['is_lane_endpoint']
+        # > Create new
+        def is_lane_endpoint(self, lane_n):
+            if lane_n in lane_head_args.keys():
+                return False
+            else:
+                return old_endpoint(self, lane_n)
 
-        def is_lane_endpoint(self, tipo, *, old_lane_f):
-            return old_lane_f(self, tipo)
+        # > Assign
+        args[2]['is_lane_endpoint'] = is_lane_endpoint
 
-        args[2]['is_lane_endpoint'] = partial(is_lane_endpoint, old_lane_f=func)
-
-        # Funzione get_lane_sub('lane') returnsf
+        # ----------------------- get_lane_sub('lane')
         subs = params['sub_div']
+        old_get = args[2].get('get_lane_sub', lambda *s, **kargs: [])
+
         diz_subs = dict()
-        for ln,sub_n  in subs.items():
+        for ln, sub_n in subs.items():
             path, name = sub_n.split('::')
-            lambs = [lambda x: x]
-            for step in reversed(path.split('.')):
-                lamb = partial(lambda f,x: f(list(itertools.chain(*map(lambda s: getattr(s,step,[]), x)))), lamb) # per ogni elemento in x concatena tutti i risultati
-            diz_subs[ln]=lamb
+            diz_subs[ln] = gen_func(path)
 
-        def get_lane_sub(self, tipo, *, diz_subs_p):# attenzione a funzione preesistente, vedi come per il "check end"
-            if tipo in diz_subs_p.keys():
-                return diz_subs_p[tipo](self) # Chiama la lambda dandogli self
-            else: return []
+        def get_lane_sub(self, tipo):  # attenzione a funzione preesistente, vedi come per il "check end"
+            if tipo in diz_subs.keys():
+                return diz_subs[tipo](self)  # Chiama la lambda dandogli self
+            else:
+                return old_get(self, tipo)
 
-        args[2]['get_lane_sub'] = partial(get_lane_sub, diz_subs_p=diz_subs)
+        args[2]['get_lane_sub'] = get_lane_sub
 
-        # start lane (include proponi e correggi in un unico step)
+        # ----------------------- start_lane('lane')
         apps = params['apportionment_func']
         reds = params['redistribution_func']
 
@@ -99,20 +126,27 @@ class lane_head(type):
             if lane not in apps_f.keys():
                 return old_start(self, lane)
 
-            ideal = apps_f[lane](self) # subdivision -> input per reapportionment
+            ideal = apps_f[lane](self)  # subdivision -> input per reapportionment
             return reds_f[lane](self, lane, self.get_lane_sub(lane), ideal)
 
-        args[2]['start_lane'] = partial(start_lane_final, old_start=start_lane, apps_f = apps, reds_f = reds)
+        args[2]['start_lane'] = partial(start_lane_final, old_start=start_lane, apps_f=apps, reds_f=reds)
 
         super().__new__(cls, *args, **kwargs)
-
 
 
 class lane_middle(type):
     """
     Un nodo intermedio, propone al nodo superiore, riceve la correzione e corregge i nodi inferiori
     """
-    def __new__(cls, *args, **kwargs):
+
+    def __new__(cls, *args, lane_middle, **kwargs):
+        # Step 1: flip the arguments
+        params = dict()
+        for l_n, ps in lane_middle.items():
+            for k in ps:
+                if k not in params:
+                    params[k] = dict()
+                params[k][l_n] = ps[k]
 
         # Funzione is_lane_endpoint('lane') (controlla che la funzione non esista già, nel caso decorala e basta)
         def func(self, lane_n):
@@ -126,12 +160,11 @@ class lane_middle(type):
 
         args[2]['is_lane_endpoint'] = partial(is_lane_endpoint, old_lane_f=func)
 
+        # Funzione get_lane_sub('lane') return
 
-    # Funzione get_lane_sub('lane')
+        # Funzione proponi('lane', **kwargs)
 
-    # Funzione proponi('lane', **kwargs)
-
-    # Funzione correggi('lane', **kwargs)
+        # Funzione eleggi('lane', **kwargs)
 
 
 class lane_bottom(type):
@@ -140,7 +173,8 @@ class lane_bottom(type):
 
     Ha la funzione per eleggere, per fornire una proposta e per ricevere il valore corretto
     """
-    def __new__(cls, *args, lane_bottom, **kwargs):
+
+    def __new__(cls, *args, lane_bottom_args, **kwargs):
         def lane_end_old(self, tipo):
             return False
 
@@ -150,7 +184,8 @@ class lane_bottom(type):
         def is_lane_endpoint(self, tipo, *, old_lane_f, lane_head_p):
             if tipo in lane_head_p.keys():
                 return True
-            else: return old_lane_f(self, tipo)
+            else:
+                return old_lane_f(self, tipo)
 
         args[2]['is_lane_endpoint'] = partial(is_lane_endpoint, old_lane_f=lane_end_old, lane_head_p=lane_bottom)
 
