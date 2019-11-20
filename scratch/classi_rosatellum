@@ -1,0 +1,50 @@
+data_source Sezione {unin, liste}: una data_source per tipo di dati
+	totals ris_uni: source.unin.["candidato","voti_cand"] # source è la keyword che indica il dataframe
+	totals lista: source.liste.["lista", "voti_lista", "candidato"]
+
+district Uninominale:
+	subsections Sezione sezioni {
+		map ris_uni: func.ris_uni
+		# in questo caso chiamare ris_uni su "sezioni" resti
+		map lista: func.lista
+	}
+	totals ris_uni: subs.sezioni.ris_uni {
+		key "candidato"
+		sum "voti_cand" -> "voti"
+	}
+	totals ris_list: comb {
+		c_votes: func.ris_uni {"voti" -> "tot_coal"}
+		l_votes: subs.sezioni.lista { key ("candidato", "lista"); sum "voti_lista" }
+		func commons.hondt {
+			args: merge [c_votes, l_votes]
+			group 
+		}
+		#
+	}
+
+	direct_election uninominale {
+		seats 1
+		order "voti"
+		class
+	}
+
+
+district Plurinominale:
+	subsections Uninominale unininominali {
+		....
+	}
+
+	totals ris_lista: subs.uninominali.ris_list {
+		key "lista"
+		sum "voti_lista" -> "voti"
+	}
+
+	totals ris_coal: transform {
+		origin: func.ris_lista
+		func commons.coalizione {class_party=Partito, class_coalition=Coalizione, optional=True}
+	}
+
+	lane_bottom plurinominale {
+		propose commons.ProposeRosatellum
+		elect
+	}
