@@ -45,6 +45,17 @@ def gen_func(path):  # var1.var2..
         lis.append(partial(lambda ns, ls: list(itertools.chain(*map(lambda t: getattr(t, ns, None), ls))), n))
     return FuncList(lis)
 
+def gen_is_lane_endpoint(args, lanes, value):
+    old_endpoint = args[2].get('is_lane_endpoint', lambda *s, **kargs: False)
+
+    def is_lane_endpoint(self, lane_name):
+        """Checks whether the node is the endpoint of the given lane"""
+        if lane_name in lanes:
+            return value
+        else return old_endpoint(self, lane_name)
+
+    return is_lane_endpoint
+
 
 class lane_head(type):
     """
@@ -82,20 +93,24 @@ class lane_head(type):
                 params[k][l_n] = ps[k]
 
         # ----------------------- is_lane_endpoint(lane)
-        # > Create a default
-        old_endpoint = args[2].get('is_lane_endpoint', lambda *s, **kargs: False)
-
-        # > Create new
-        def is_lane_endpoint(self, lane_n):
-            if lane_n in lane_head_args.keys():
-                return False
-            else:
-                return old_endpoint(self, lane_n)
-
-        # > Assign
-        args[2]['is_lane_endpoint'] = is_lane_endpoint
+        args[2]['is_lane_endpoint'] = gen_is_lane_endpoint(args, lane_head_args.keys(), False)
 
         # ----------------------- get_lane_sub('lane')
+        def gen_get_lane_sub(args, sub_divs):
+            old_get = args[2].get('get_lane_sub', lambda *s,**kargs: [])
+            diz_subs = dict()
+            diz_type = dict()
+            for ln, sub_n in subs.items():
+                path, name = sub_n.split('::')
+                diz_subs[ln] = gen_func(path)
+                diz_type[ln] = name
+
+            def get_lane_sub(self, lane):
+                if lane in diz_subs.keys():
+                    res = dis_subs[tipo](self)
+                    all([]
+
+
         subs = params['sub_div']
         old_get = args[2].get('get_lane_sub', lambda *s, **kargs: [])
 
