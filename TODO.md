@@ -7,10 +7,11 @@
 
 ## Priority
 
-+ Define the type of various lane related functions in order to provide static type analysis
+
 
 ## Almost ready
 
++ Apply a function on a column 
 + Merging different data sources through a function
 
 ## Todo for examples

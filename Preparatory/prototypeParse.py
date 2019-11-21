@@ -10,12 +10,13 @@ def tempColName(columns, first_choice):
         c+=1
     return f"{first_choice}_{c}"
 
-def deepCopyArgs(func):
-    def f(*args, **kwargs):
-        args = copy.deepcopy(args)
-        kwargs = copy.deepcopy(kwargs)
-        return func(*args, **kwargs)
+def deepCopyArgs(*args):
+    def deepCopyArgasNoParam(func):
 
+        def f(*args, **kwargs):
+            args = copy.deepcopy(args)
+            kwargs = copy.deepcopy(kwargs)
+        return func(*args, **kwargs)
     return f
 
 @deepCopyArgs TODO: implement excluding arguments
