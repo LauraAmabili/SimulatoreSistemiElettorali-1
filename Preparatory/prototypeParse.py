@@ -10,16 +10,7 @@ def tempColName(columns, first_choice):
         c+=1
     return f"{first_choice}_{c}"
 
-def deepCopyArgs(*args):
-    def deepCopyArgasNoParam(func):
-
-        def f(*args, **kwargs):
-            args = copy.deepcopy(args)
-            kwargs = copy.deepcopy(kwargs)
-        return func(*args, **kwargs)
-    return f
-
-@deepCopyArgs TODO: implement excluding arguments
+@deepcopyDecorator(1)
 def sub_map_total(hubRef, subListName, totalsId):
     def returned(self, sbarramento=False):
         iterator = map(lambda s: hubRef.getInstance(self.tipi_sub[subListName],s)
@@ -28,7 +19,7 @@ def sub_map_total(hubRef, subListName, totalsId):
 
     return (returned, f"map_{subListName}_{totalsId}")
 
-@deepCopyArgs
+@deepcopyDecorator()
 def totalsFromSubs(subList, totalsId, aggrKey, aggrDict, renameDicts=[], filterDict={}):
     """
     subList :: String -> The name of the subsections I'm querying

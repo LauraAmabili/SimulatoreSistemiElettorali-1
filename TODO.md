@@ -7,7 +7,7 @@
 
 ## Priority
 
-
++ Thread safe iterator for the candidate list
 
 ## Almost ready
 
