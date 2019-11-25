@@ -9,6 +9,9 @@
 
 + Thread safe iterator for the candidate list
 
+## Bug fixes:
+The combination as defined currently in conventions.md doesn't work with multiple column aggregation and scalars
+
 ## Almost ready
 
 + Apply a function on a column 

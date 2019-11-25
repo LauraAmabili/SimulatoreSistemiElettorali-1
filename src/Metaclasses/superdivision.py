@@ -6,6 +6,7 @@ class superdivision(type):
 
     Provides:
         + get_subdivisions([type]) -- Returns all subdivisions
+        + is_parent(instance) -- returns whether the given instance is a descendant of the supdiv
     """
     # Modifica init
 
