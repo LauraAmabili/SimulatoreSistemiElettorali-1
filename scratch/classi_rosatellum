@@ -4,7 +4,7 @@ data_source Sezione {unin, liste}: una data_source per tipo di dati
 
 district Uninominale:
 	subsections Sezione sezioni {
-		map ris_uni: func.ris_uni
+		map ris_uni: func.totals
 		# in questo caso chiamare ris_uni su "sezioni" resti
 		map lista: func.lista
 	}
