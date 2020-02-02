@@ -34,8 +34,9 @@ def function_arg_parser(source_parser, name, args=None,
 
         globs = globals()
         print("Locals prima di cercare la funzione: ", local)
+        print("Cerco funzione: ", fun)
         f = eval(fun, globs, local)
-
+        print(f)
         return f(*eff_args, **eff_kwargs)
     return return_fun
 

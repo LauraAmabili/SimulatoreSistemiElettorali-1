@@ -163,7 +163,7 @@ class totals(type):
             return transform_support
 
     @classmethod
-    def parse_combination(mcs, totals=True, *, function, keys, args, **kwargs):
+    def parse_combination(mcs, totals=True, *, function, merge_keys=None, keys, args, **kwargs):
         """
         Se totals è true allora alle funzioni sotto passa gli sbarramenti altrimenti no
 
@@ -174,6 +174,8 @@ class totals(type):
             + dizionario con solo due chiavi: "type" che può essere "series", "dataframe" or "scalar" e "source" che è una
                 funzione
         """
+        if merge_keys is None:
+            merge_keys = keys
 
         fun = eval(function, globals(), locals())
 
@@ -197,8 +199,9 @@ class totals(type):
                 scalars.append(i.get('source'))
 
         def ops(dfs, ses, scs):
+            print("Ops arguments: ", dfs, ses, scs)
             if len(dfs) > 1:
-                frame = functools.reduce(lambda a, b: pd.merge(a, b, on=list(keys)), dfs)
+                frame = functools.reduce(lambda a, b: pd.merge(a, b, on=list(merge_keys)), dfs)
             else:
                 frame = dfs[0]
             gps = frame.groupby(list(keys))
@@ -222,7 +225,7 @@ class totals(type):
         if totals:
             def comb_totals(locs, *sbarramenti, **kwargs):
                 act_dataframes = [i(locs, *sbarramenti, **kwargs) for i in dataframes]
-                act_series     = [i(locs, *sbarramenti, **kwargs) for i in dataframes]
+                act_series     = [i(locs, *sbarramenti, **kwargs) for i in series]
                 act_scalars    = [i(locs, *sbarramenti, **kwargs) for i in scalars]
                 return ops(act_dataframes, act_series, act_scalars)
 
@@ -230,7 +233,7 @@ class totals(type):
 
         def comb_support(locs, *args, **kwargs):
             act_dataframes = [i(locs, **kwargs) for i in dataframes]
-            act_series = [i(locs, **kwargs) for i in dataframes]
+            act_series = [i(locs, **kwargs) for i in series]
             act_scalars = [i(locs, **kwargs) for i in scalars]
 
             return ops(act_dataframes, act_series, act_scalars)
