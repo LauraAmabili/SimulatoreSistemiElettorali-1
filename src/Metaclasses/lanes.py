@@ -146,7 +146,7 @@ class lane_head(type):
 
         args[2]['start_lane'] = partial(start_lane_final, old_start=start_lane, apps_f=apps, reds_f=reds)
 
-        super().__new__(cls, *args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
 
 
 class lane_middle(type):
