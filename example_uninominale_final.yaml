@@ -1,0 +1,50 @@
+lane:
+        uninominale:
+                node_type: only
+                first_input: None
+                distribution: uninom # Il tipo only non si confronta con altri livelli, quindi non
+                                     # ha bisogno di ideal e non, distribution è il tipo di propose
+                info_name: Uninominale
+
+
+                
+# Mi serve poter dire che le informazioni derivano da un DataFrame
+# 
+# In lanes_support.propose ho già come passare da un dataframe a sia distribution che info
+#
+# Devo solo aggiungere un modo per dire di limitare quali rows passano nella distribution (in info
+# posso buttare tutto)
+#
+# Una cosa simile la devo già definire per filter, modi:
+#   - Criterio su una colonna (vero/falso/>/</==/relativo al tot)
+#   - Primi k ordinati in cresc/decr
+#
+
+lanes_support:
+        propose:
+                uninom:
+                        fun: self.percentuali # Definita come totals_support
+                        info_key: Candidato # Esplicito la chiave, alternativamente è implicita
+                                            # ovvero prende la chiave di distribution
+                        info:
+                                - PercentualePreferenze
+                        distribution:
+                                # Non è una lista, quindi distribuisce a tutte le Key che 
+                                # soddisfano i criteria il dato numero di seats
+                                key: Candidato
+                                seats: 1 # Potrebbe essere un source, a patto che restituisca un
+                                         # intero, oppure una stringa che rappresenta una 
+                                         # colonna del dataframe
+                                selector:
+                                        column: Voti
+                                        order: decreasing
+                                        take: 1
+                                        # Altri possibili esempi:
+                                        #   Tutti quelli con più del 30%
+                                        #    column: Voti
+                                        #    target: 0.3
+                                        #    logic: relative
+                                        #    criteria: gt # greater than
+                                        #    take: all
+                                
+
