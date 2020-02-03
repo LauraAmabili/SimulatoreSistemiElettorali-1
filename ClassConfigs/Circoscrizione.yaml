@@ -1,0 +1,166 @@
+metaclasses:
+  - superdivision
+  - totals
+  - lanes
+  - external
+
+subdivisions:
+  plurinominali:
+    type: Plurinominale
+    functions:
+      - name: seggi
+        source:
+          type: att
+          name: self.seggi
+      - name: liste
+        source:
+          totals: lista
+      - name: coalizioni
+        source:
+          totals: coalizione
+
+totals:
+  lista:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_plurinominali_liste
+    keys:
+      - Lista
+    ops:
+      Voti: sum
+  coalizione:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_plurinominali_coalizioni
+    keys:
+      - Coalizione
+    ops:
+      Voti: sum
+
+totals_support:
+  elettore_lista:
+    type: transform
+    source:
+      totals: lista
+    ops:
+      - type: column
+        replace_name: Elettore
+        column: Lista
+        column_type: Partito
+        source:
+          type: fun
+          name: commons.exec_fun
+          attr:
+            - elettore
+  eleggibili:
+    type: combine
+    function: commons.concat
+    args:
+      - type: scalar
+        source:
+          totals: coalizione
+          args:
+            - coal_eletta
+          columns:
+            - Coalizione -> Elettore
+            - Voti
+      - type: scalar
+        source:
+          totals: lista
+          args:
+            - eletta_sola
+          columns:
+            - Lista -> Elettore
+            - Voti
+  ripartisci_seggi:
+    type: combine
+    function: commons.hondt
+    args:
+      - type: dataframe
+        source:
+          totals: lista
+          args:
+            - eletta
+          rename:
+            Lista: Party
+            Voti: Votes
+      - type: dataframe
+        source:
+          type: fun
+          name: self.elettore_lista
+          columns:
+            - Lista -> Party
+            - Elettore
+      - type: series
+        source:
+          type: kwarg
+          name: seggi
+          columns:
+            - Elettore
+            - Seggi -> seats
+    merge_keys:
+      - Party
+    keys:
+      - Elettore
+    rename:
+      Party: Lista
+      Seats: Seggi
+      Remainder: RestoCircoLista
+      RemainderUsed: RestoCircoListaUsato
+
+lanes_propose:
+  elettori:
+    source:
+      type: fun
+      name: commons.hondt
+      args:
+        - source:
+            type: fun
+            name: self.eleggibili
+            columns:
+              - Elettore -> Party
+              - Voti -> Votes
+        - source:
+            type: fun
+            name: self.subs_plurinominali_seggi
+      columns:
+        - Party -> Elettore
+        - Seats -> Seggi
+        - Remainder -> RestoCircoCoal
+        - RemainderUsed -> RestoCircoCoalUsato
+    distribution:
+      - Elettore
+      - Seggi
+    info:
+      - RestoCircoCoal
+      - RestoCircoCoalUsato
+
+  liste:
+    source:
+      type: fun
+      name: self.ripartisci_seggi
+      kwargs:
+        seggi:
+          source:
+            type: kwarg
+            name: distribution
+    distribution:
+      - Lista
+      - Seggi
+    info:
+      - RestoCircoLista
+      - RestoCircoListaUsato
+
+lane:
+  plurinominale:
+    node_type: node
+    sub_level: Plurinominale
+    first_input: kwarg
+    operations:
+      - collect_type: lista
+        ideal_dist: $
+        corrector: commons.correct
+    info_name: Circoscrizione
+
