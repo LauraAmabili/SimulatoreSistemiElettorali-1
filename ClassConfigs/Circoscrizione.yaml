@@ -145,7 +145,7 @@ lanes_propose:
         seggi:
           source:
             type: kwarg
-            name: distribution
+            name: constraints
     distribution:
       - Lista
       - Seggi
@@ -160,7 +160,6 @@ lane:
     first_input: kwarg
     operations:
       - collect_type: lista
-        ideal_dist: $
+        ideal_distribution: $
         corrector: commons.correct
     info_name: Circoscrizione
-

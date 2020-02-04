@@ -16,9 +16,26 @@ class totals(type):
         + type
         + *filters
     """
-    def __new__(mcs, *args, totals, **kwargs):
-        for name, config in totals.items():
-            pass
+    def __new__(mcs, *args, totals=None, totals_support=None, **kwargs):
+        if totals is None:
+            totals = {}
+
+        if totals_support is None:
+            totals_support = {}
+
+        totals = {k: mcs.parse_total_proper(k, **v) for k, v in totals.items()}
+        supports = {k: mcs.parse_total_support(**v) for k, v in totals_support.items()}
+
+        old_tots = args[2].get('totals', lambda *x, **w: print(x, w))
+
+        def totals_f(self, lane, *args, **kwargs):
+            if lane not in totals:
+                return old_tots(self, lane, *args, **kwargs)
+            return totals[lane](self, lane, *args, **kwargs)
+
+        args[2]['totals'] = totals_f
+        for i in supports:
+            args[2][i] = supports[i]
 
         return super().__new__(mcs, *args, **kwargs)
 

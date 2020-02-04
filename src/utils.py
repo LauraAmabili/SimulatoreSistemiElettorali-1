@@ -67,7 +67,27 @@ def parse_column_selector_compare(*, column_val=None, column=None, logic="absolu
         return filter_relative
 
 
-def parse_column_selector_take(*, column_val=None, column=None, order, take):
+def parse_row_selector_value(*, column, criteria, logic, threshold):
+
+    def compare_value(v):
+        if criteria == "lt":
+            return v < threshold
+        elif criteria == "eq":
+            return v == threshold
+        elif criteria == "gt":
+            return v > threshold
+        else:
+            raise KeyError("Wrong criteria")
+
+    def filter_rows(df):
+        if logic == "relative":
+            df2 = df.copy()
+            df2[column] = df2[column]/df2[column].sum()
+            return df[df2.apply(lambda s: compare_value(s[column]), axis=1)]
+    return filter_rows
+
+
+def parse_row_selector_take(*, column_val=None, column=None, order, take):
     """
     Returns a function taking local variables, a dataframe and returning a slice of the dataframe
     """
@@ -81,7 +101,7 @@ def parse_column_selector_take(*, column_val=None, column=None, order, take):
     else:
         ascending: bool = True
 
-    def take_rows(locs, df):
-        return df.sort_values(column, ascending=ascending).iloc[:take]
+    def take_rows(df):
+        return df.sort_values(column, ascending=ascending).iloc[:take].copy()
 
     return take_rows

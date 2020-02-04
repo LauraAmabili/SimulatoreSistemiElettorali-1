@@ -1,0 +1,32 @@
+metaclasses:
+  - elector
+  - totals
+  - PolEnt
+  - external
+  - filter
+  - logger
+
+elector:
+  plurinominale:
+    # farlo con una funzione?
+
+external:
+  coalizione:
+    init: True
+    default:
+
+filter: # viene chiamata come: filter(geoEnt, type, row, df)
+  eletto:
+    type: predicate
+    data_type: dataframe
+    column_key: Lista
+    column_val: Voti
+    logic: relative
+    criteria: gt
+    target: 0.03
+    forward:
+      - geoent
+
+    source:
+      type: fun
+      name:

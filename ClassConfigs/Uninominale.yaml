@@ -1,0 +1,55 @@
+metaclasses:
+  - superdivision
+  - totals
+  - lanes
+  - external
+
+subdivisions:
+  sezioni:
+    type: Sezione
+    functions:
+      - name: liste_cand
+        source:
+          type: fun
+          name: self.get_lista_cand
+      - name: cand
+        source:
+          type: fun
+          name: self.get_voti_cand
+
+totals_support:
+  percentuali:
+    type: transform
+    source:
+      totals: candidato
+    ops:
+      - type: column
+        column: Voti
+        source:
+          type: fun
+          name: commons.relative_column
+
+lanes_propose:
+  uninominale:
+    source:
+      type: fun
+      name: self.percentuali
+      columns:
+        - Candidato
+        - Voti -> PercentualeUninom
+    info_key: Candidato
+    info:
+      - PercentualiPreferenze
+    distribution:
+      key: Candidato
+      seats: 1
+      selector:
+        column: Voti
+        order: decreasing
+        take: 1
+
+lanes:
+  uninominale:
+    node_type: only
+    distribution: uninominale
+    info_name: Uninominale

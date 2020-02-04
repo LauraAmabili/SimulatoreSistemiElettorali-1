@@ -1,228 +1,292 @@
 # -*- coding: utf-8 -*-
-"""
-Tutti i membri di una lane sanno quanti rappresentanti vengono eletti ai livelli inferiori (funzione to_elect che è
-ricorsiva con caso base in lane_bottom)
-
-All must provide the functions:
-    + is_lane_endpoint([type])
-
-lane_head e lane_middle hanno riferimenti al livelli inferiore, solo un livello inferiore può essere indicato. Deve
-essere indicato nel seguente modo:
-sub1.sub2. ... .subT::Target, questa notazione si traduce in:
-    > scegli le subdivision nella lista sub1, per ognuna scegli le subdivision nella lista sub2 degli elementi di
-    sub1 e così via fino alla lista subT degli elementi di subN che avranno tipo target.
-    > Se l'uninominale fosse una lane che inizia in Nazione e ha solo Uninominale sarebbe:
-    > circoscrizioni.plurinominali.uninominali::Uninominale
-"""
-# TODO: the lane process starting in the lane_head should return a set of strings where the strings are the identifiers
-# of the candidates which received a proposal by the lane
-# the lane should also, as an intentional side effect, provide each proposed candidate with the information it needs
-# to make a choice and to pass down the choice
-
-import itertools
-from functools import partial
+import pandas as pd
+import src.GlobalVars
+import src.utils
 
 
-class FuncList:
-    """
-    Starts with a list of functions, on call it will apply the argument to the first function,
-    then the result to the second and so on
-    """
+class lanes(type):
+    def __new__(mcs, *args, **kwargs):
+        pass
 
-    def __init__(self, funcs):
-        self.functions = funcs
-
-    def __call__(self, val):
-        r = val
-        for i in self.functions:
-            r = i(r)
-        return r
-
-
-def gen_func(path):  # var1.var2..
-    lis = []
-    for i, n in enumerate(path.split('.')):
-        lis.append(partial(lambda ns, ls: list(itertools.chain(*map(lambda t: getattr(t, ns, None), ls))), n))
-    return FuncList(lis)
-
-def gen_is_lane_endpoint(args, lanes, value):
-    old_endpoint = args[2].get('is_lane_endpoint', lambda *s, **kargs: False)
-
-    def is_lane_endpoint(self, lane_name):
-        """Checks whether the node is the endpoint of the given lane"""
-        if lane_name in lanes:
-            return value
-        else return old_endpoint(self, lane_name)
-
-    return is_lane_endpoint
-
-
-class lane_head(type):
-    """
-    La configurazione di lane_head DEVE indicare un numero prioritario, le lane saranno eseguite in sequenza dando
-    priorità a numeri più bassi
-
-    Il punto di partenza della Lane, per esempio nazione. Salvato in hub
-    Sa solo correggere le proposte ottenute e calcolare un exact_value
-    """
-
-    def __new__(cls, *args, lane_head_args, **kwargs):
+    @staticmethod
+    def forward_info_gen_distr(tail, lane_name, distribution, *info):
         """
-        I parametri sono in lane_head ed è un dizionario
-        del tipo:
-            lane1:
-                par1:...
-                par2:...
-            lane2:
-                par2:...
-                par3:...
-        Parametri:
-            sub_div -> la classe che sta sotto nella lane, notazione: sub1.sub2. ... .subT::Target
-            apportionment_func -> la funzione da usare per assegnare la divisione dei seggi
-                :: subdivision -> input della redistribution
-            redistribution_func -> la funzione che aggiusta le stime dei livelli inferiori
-                :: caller, lane, subdivisions, ideal distribution -> candidati che hanno ricevuto una proposta
+        La funzione chiamata da lane_tail e lane_only passando self, distribuzione, nome della lane, le info
+        Inoltra le info e genera la lista che lane_exec deve restituire
+        """
+        info_final = dict()
+        for i in info[-1::-1]:
+            for target, info_targ in i.items():
+                info_targ_total = info_final.get(target, dict())
+                info_targ_total.update(info_targ)
+                info_final[target] = info_targ_total
+
+        for el, info in info_final.items():
+            t = src.GlobalVars.Hub.get_instance("PolEnt", el)
+            s = pd.Series(info)
+            t.log(tail, lane_name, s)
+
+        proposals = []
+        for r in distribution.iterrows():
+            proposals.append((tail, lane_name, r.iloc[0], r.iloc[1]))
+
+        return proposals
+
+    @classmethod
+    def parse_operation_lane(mcs, sub_level, *,
+                             collect_type, ideal_distribution, corrector, collect_constraints=None, **kwargs):
+        """
+        Genera la funzione di una singola operazione, accetta:
+            + locs
+            + prev_distribution
+            + info_specific
+            + info_general
+
+        Restituisce:
+            + distribution
+            + new_general_info
+            + new_specific_info
+        """
+        ideal_distr = ideal_distribution
+        corrector = eval(corrector)
+
+        def operation_fun(loc, specific_info, *general_info, distribution):
+
+            district = eval("self", globals(), loc)
+
+            subs = src.GlobalVars.Hub.get_subdivisions(district, sub_level)
+
+            def get_proposal(name):
+                s = src.GlobalVars.Hub.get_instance(sub_level, name)
+                if collect_constraints is None:
+                    distr, loc_info_new = s.propose(collect_type)
+                elif collect_constraints == '$':
+                    constr = distribution.get(name, pd.DataFrame())
+                    distr, loc_info_new = s.propose(collect_type, constr)
+                else:
+                    constr = district.propose(collect_constraints)
+                    distr, loc_info_new = s.propose(collect_type, constr)
+
+                return distr, loc_info_new
+
+            distributions = {}
+            new_general = {}
+            new_specific = {}
+            print("line 75, subs= ", subs)
+            for i in subs:
+                n_dist, n_spec = get_proposal(i)
+                distributions[i] = n_dist
+                new_specific[i] = n_spec
+
+            if type(ideal_distr) != str:
+                ideal_distribution = ideal_distr['source'](loc, district)
+            if ideal_distr == "$":
+                ideal_distribution = distribution
+            else:
+                ideal_distribution = district.propose(ideal_distr)
+
+            specific_cumulative = {k: v for k, v in specific_info.items()}
+            for k, v in new_specific.items():
+                d_t = specific_cumulative.get(k, {})
+                d_t.update(v)
+                specific_cumulative[k] = d_t
+
+            correct_distr, new_loc, new_gen = corrector(district, ideal_distribution,
+                                                        distributions,
+                                                        specific_cumulative, *general_info)
+
+            specific_new_cumulated = {k: v for k, v in new_specific.items()}
+            for k, v in new_loc.items():
+                d_t = specific_new_cumulated.get(k, {})
+                d_t.update(v)
+                specific_new_cumulated[k] = d_t
+
+            return correct_distr, specific_new_cumulated, new_gen
+        return operation_fun
+
+    @classmethod
+    def parse_ops_lane(mcs, sub_level, *operazioni):
+        """
+        Genera una funzione che accetta una distribuzione, le informazioni e restituisce nuove informazioni e una nuova
+        distribuzione
+
+        Restituisce:
+            distribution
+            generic_info_new
+            specific_info_new
+        """
+        ops_funcs = list(map(lambda o_d: mcs.parse_operation_lane(sub_level, **o_d), operazioni))
+
+        def generated_operations(loc, distribution, district_gen_info, *general_info):
+            spec_info = {}
+            for f in ops_funcs:
+                print("Info generic: ", district_gen_info)
+                print("Info specific: ", spec_info)
+                print("-------------")
+                n_distr, sp_new_cum, new_generic = f(loc, spec_info,
+                                                     district_gen_info, *general_info,
+                                                     distribution=distribution)
+                distribution = n_distr
+
+                specific_cumulative = {k: v for k, v in spec_info.items()}
+                for k, v in sp_new_cum.items():
+                    d_t = specific_cumulative.get(k, {})
+                    d_t.update(v)
+                    specific_cumulative[k] = d_t
+                spec_info = specific_cumulative
+
+                gen_cumulative = {k: v for k, v in district_gen_info.items()}
+                for k, v in new_generic.items():
+                    d_t = gen_cumulative.get(k, {})
+                    d_t.update(v)
+                    gen_cumulative[k] = d_t
+                district_gen_info = gen_cumulative
+            return distribution, spec_info, district_gen_info
+        return generated_operations
+
+    @classmethod
+    def parse_lane_tail(mcs, lane_name, *, info_name, **kwargs):
+        """
+        Genera la funzione che riceve una distribuzione come kwarg, registra le informazioni e distribuisce seggi
+        """
+        def exec_lane_tail(self, lane, *info, distribution):
+            info_cumulative = {}
+            for dic in info[-1::-1]:
+                for k, inf in dic.items():
+                    d_t = info_cumulative.get(k, {})
+                    d_t.update(inf)
+                    info_cumulative[k] = d_t
+            for k in info_cumulative:
+                info_cumulative[k][info_name] = self.name
+                t = src.GlobalVars.Hub.get_instance("PolEnt", k)
+                t.log(self, lane_name, info_cumulative[k])
+
+            ret = []
+            for r in distribution.iterrows():
+                ret.append((self, lane_name, r.iloc[0], int(r.iloc[1])))
+            return ret
+        return exec_lane_tail
+
+    @classmethod
+    def parse_lane_node(mcs, lane_name, *, operations, info_name, sub_level, **kwargs):
+        """
+        Genera la funzione che prende una distribution come kwarg, la processa e inoltra a livelli inferiori
+        """
+        ops_f = mcs.parse_ops_lane(sub_level, *operations)
+
+        def exec_lane_node(self, lane, *info, distribution):
+            distr, spec_info, gen_info = ops_f(locals(), distribution, *info)
+            subs = src.GlobalVars.Hub.get_subdivisions(self, sub_level)
+
+            rets = []
+            for i in subs:
+                sub_info = {k: v for k, v in gen_info.items()}
+                for k, v in spec_info.get(i, {}):
+                    s = sub_info.get(k, {})
+                    s.update(v)
+                    s[info_name] = self.name
+                    sub_info[k] = s
+                inst = src.GlobalVars.Hub.get_instance(sub_level, i)
+                rets.extend(inst.exec_lane(lane_name, sub_info, *info, distribution=distr[i]))
+        return exec_lane_node
+
+    @classmethod
+    def parse_lane_head(mcs, lane_name, *, first_input, **kwargs):
+        """
+        La head, usa distribution per generare una distribuzione ideale e poi la modifica con le operazioni
+        """
+        f = mcs.parse_lane_node(lane_name, **kwargs)
+
+        def exec_head(self, lane):
+            distribution, info = self.propose(first_input)
+            return f(self, lane_name, info, distribution=distribution)
+
+
+    @classmethod
+    def parse_lane_only(mcs, lane_name, *, distribution, **kwargs):
+        """
+        Genera la funzione che fa' tutto in una lane single-step
         """
 
-        # Step 1: flip the arguments
-        params = dict()
-        for l_n, ps in lane_head_args.items():
-            for k in ps:
-                if k not in params:
-                    params[k] = dict()
-                params[k][l_n] = ps[k]
+        distr_name = distribution
+        f = mcs.parse_lane_tail(lane_name, **kwargs)
 
-        # ----------------------- is_lane_endpoint(lane)
-        args[2]['is_lane_endpoint'] = gen_is_lane_endpoint(args, lane_head_args.keys(), False)
+        def exec_only(self, lane):
+            distrib, info = self.propose(distr_name)
 
-        # ----------------------- get_lane_sub('lane')
-        def gen_get_lane_sub(args, sub_divs):
-            old_get = args[2].get('get_lane_sub', lambda *s,**kargs: [])
-            diz_subs = dict()
-            diz_type = dict()
-            for ln, sub_n in subs.items():
-                path, name = sub_n.split('::')
-                diz_subs[ln] = gen_func(path)
-                diz_type[ln] = name
+            return f(self, lane_name, *info, distribution=distrib)
 
-            def get_lane_sub(self, lane):
-                if lane in diz_subs.keys():
-                    res = dis_subs[tipo](self)
-                    all([]
+        return exec_only
 
+    @classmethod
+    def parse_lane_fun(mcs, lane_name, *, node_type, **kwargs):
+        """
+        Returns the function which is to be called when exec_lane(lane_name, *info, **kwargs)
+         is called
+        """
+        if node_type == "only":
+            return mcs.parse_lane_only(lane_name, **kwargs)
+        if node_type == "head":
+            return mcs.parse_lane_head(lane_name, **kwargs)
+        if node_type == "tail":
+            return mcs.parse_lane_tail(lane_name, **kwargs)
+        if node_type == "node":
+            return mcs.parse_lane_node(lane_name, **kwargs)
 
-        subs = params['sub_div']
-        old_get = args[2].get('get_lane_sub', lambda *s, **kargs: [])
+    @classmethod
+    def parse_propose_distribution_dict(mcs, key, seats, selector, **kwargs):
+        """
+        Key: la chiave, una stringa
+        seats:
+            + Un intero
+            + Una stringa (il valore di una colonna)
 
-        diz_subs = dict()
-        for ln, sub_n in subs.items():
-            path, name = sub_n.split('::')
-            diz_subs[ln] = gen_func(path)
+        selector: filtra le linee, di due tipi
+            + Ordina le linee in base ad una colonna e restituisce le prime n
+            + Per ogni linea controlla che il valore in una colonna rispetti un criterio
+        """
 
-        def get_lane_sub(self, tipo):  # attenzione a funzione preesistente, vedi come per il "check end"
-            if tipo in diz_subs.keys():
-                return diz_subs[tipo](self)  # Chiama la lambda dandogli self
-            else:
-                return old_get(self, tipo)
+        def distribution_derive(locs, source_df):
+            return source_df
 
-        args[2]['get_lane_sub'] = get_lane_sub
+        return key, distribution_derive
 
-        # ----------------------- start_lane('lane')
-        apps = params['apportionment_func']
-        reds = params['redistribution_func']
+    @classmethod
+    def parse_propose_function(mcs, source, distribution, info, info_key=None, **kwargs):
+        """
+        source: la funzione di partenza
+        distribution: come derivare la distribuzione, può essere una lista di due colonn
+                      o un dizionario che specifica che colonne prendere e quali righe prendere
+        info: quali colonne mettere come informazioni
+        info_key: se la chiave delle info è diversa dalla chiave della distribuzione
+        """
 
-        def start_lane(self, lane):
-            raise KeyError("No such lane exists")
+        def return_function_propose(locs, *args, **kwargs):
+            data = source(locs, )
+            return distr, general_information, specific_information
 
-        if 'start_lane' in args[2]:
-            start_lane = args[2]['start_lane']
+        return return_function_propose
 
-        def start_lane_final(self, lane, *, old_start, apps_f, reds_f):
-            if lane not in apps_f.keys():
-                return old_start(self, lane)
+    @classmethod
+    def parse_distribution_dict(mcs, key, seats, selector):
+        """
+        Quando distribution è un dict usa questa funzione
 
-            ideal = apps_f[lane](self)  # subdivision -> input per reapportionment
-            return reds_f[lane](self, lane, self.get_lane_sub(lane), ideal)
+        Key: la chiave
+        Seats:
+           + Intero
+           + Source: funzione che restituisce un intero
+           + Stringa che indica una colonna
+        Selector: (usa src.utils.selectors)
+        """
 
-        args[2]['start_lane'] = partial(start_lane_final, old_start=start_lane, apps_f=apps, reds_f=reds)
+        def return_distribution_fun(locs, data):
+            return distribution
 
-        return super().__new__(cls, *args, **kwargs)
+        return key, return_distribution_fun
 
-
-class lane_middle(type):
-    """
-    Un nodo intermedio, propone al nodo superiore, riceve la correzione e corregge i nodi inferiori
-    """
-
-    def __new__(cls, *args, lane_middle, **kwargs):
-        # Step 1: flip the arguments
-        params = dict()
-        for l_n, ps in lane_middle.items():
-            for k in ps:
-                if k not in params:
-                    params[k] = dict()
-                params[k][l_n] = ps[k]
-
-        # Funzione is_lane_endpoint('lane') (controlla che la funzione non esista già, nel caso decorala e basta)
-        def func(self, lane_n):
-            return False
-
-        if 'is_lane_endpoint' in args[2]:
-            func = args[2]['is_lane_endpoint']
-
-        def is_lane_endpoint(self, tipo, *, old_lane_f):
-            return old_lane_f(self, tipo)
-
-        args[2]['is_lane_endpoint'] = partial(is_lane_endpoint, old_lane_f=func)
-
-        # Funzione get_lane_sub('lane') return
-
-        # Funzione proponi('lane', **kwargs)
-
-        # Funzione eleggi('lane', **kwargs)
-
-
-class lane_bottom(type):
-    """
-    Il nodo che riceve le informazioni dai punti precedenti ed elegge dei rappresentanti
-
-    Ha la funzione per eleggere, per fornire una proposta e per ricevere il valore corretto
-    """
-
-    def __new__(cls, *args, lane_bottom_args, **kwargs):
-        def lane_end_old(self, tipo):
-            return False
-
-        if 'is_lane_endpoint' in args[2]:
-            lane_end_old = args[2]['is_lane_endpoint']
-
-        def is_lane_endpoint(self, tipo, *, old_lane_f, lane_head_p):
-            if tipo in lane_head_p.keys():
-                return True
-            else:
-                return old_lane_f(self, tipo)
-
-        args[2]['is_lane_endpoint'] = partial(is_lane_endpoint, old_lane_f=lane_end_old, lane_head_p=lane_bottom)
-
-    # funzione proponi('lane', **kwargs)
-
-    # funzione eleggi('lane', **kwargs)
-
-    # funzione eletti('lane')
-
-
-class direct_election(type):
-    """
-    Il numero prioritario può essere fornito ma di default è 0
-
-    Un nodo che è sia lane_head che lane_bottom
-    Elegge direttamente i rappresentanti. Salva in hub come punto di partenza
-
-    Deve sapere quanti rappresentanti eleggere, con che criterio
-    """
-
-    # funzione eleggi('lane', **kwargs)
-
-    # funzione eletti('lane')
-
-    # funzione is_end_of_lane('lane') true
+    @classmethod
+    def parse_propose(mcs, configuration):
+        """
+        Receives the propose dict, returns the propose function
+        """
