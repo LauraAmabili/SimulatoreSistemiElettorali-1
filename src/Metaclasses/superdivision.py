@@ -27,7 +27,7 @@ class superdivision(type):
     TODO: for each subdivision add an ini
 
     """
-    def __new__(mcs, *args, subdivisions, **kwargs):
+    def __new__(mcs, *args, subdivisions=None, **kwargs):
 
         """
         Questa metaclasse deve essere prima di external,
@@ -41,7 +41,7 @@ class superdivision(type):
         for name, info in subdivisions.items():
             # aggiungi queste variabili a quelle da mettere nell'init
             dic_existant = dict_external.get(name, {})
-            dic_existant['init']=True
+            dic_existant['init'] = True
             dict_external[name] = dic_existant
 
             # aggiungi ad Hub

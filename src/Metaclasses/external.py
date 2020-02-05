@@ -14,10 +14,14 @@ class external(type):
     """
 
     def __new__(mcs, *args, external=None, **kwargs):
-        external_data = external
-        print("External conf: ", external)
+        if external is None:
+            external_data = []
+        else:
+            external_data = external
 
-        init_vars = [(k, d.get('default', ())) for k, d in external.items()
+        print("External conf: ", external_data)
+
+        init_vars = [(k, d.get('default', ())) for k, d in external_data.items()
                      if (type(d) == dict) and (d.get('init', False))]
         print("Init vars external: ", init_vars)
 
@@ -36,13 +40,13 @@ class external(type):
 
         args[2]['__init__'] = __init__
 
-        accessors = mcs.gen_accessors(external)
+        accessors = mcs.gen_accessors(external_data)
         args[2].update(accessors)
 
-        providers = mcs.gen_providers(external)
+        providers = mcs.gen_providers(external_data)
         args[2].update(providers)
 
-        print("external processed: ", external)
+        print("external processed: ", external_data)
         print(accessors, providers)
 
         return super().__new__(mcs, *args, **kwargs)

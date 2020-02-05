@@ -5,8 +5,14 @@ import src.utils
 
 
 class lanes(type):
-    def __new__(mcs, *args, **kwargs):
-        pass
+    def __new__(mcs, *args, lane=None, lanes_propose=None, **kwargs):
+        if lane is None:
+            lane = {}
+
+        if lanes_propose is None:
+            lanes_propose = {}
+
+        return  super().__new__(mcs, *args, **kwargs)
 
     @staticmethod
     def forward_info_gen_distr(tail, lane_name, distribution, *info):
@@ -79,11 +85,11 @@ class lanes(type):
                 new_specific[i] = n_spec
 
             if type(ideal_distr) != str:
-                ideal_distribution = ideal_distr['source'](loc, district)
+                ideal_distrib = ideal_distr['source'](loc, district)
             if ideal_distr == "$":
-                ideal_distribution = distribution
+                ideal_distrib = distribution
             else:
-                ideal_distribution = district.propose(ideal_distr)
+                ideal_distrib = district.propose(ideal_distr)
 
             specific_cumulative = {k: v for k, v in specific_info.items()}
             for k, v in new_specific.items():
@@ -91,7 +97,7 @@ class lanes(type):
                 d_t.update(v)
                 specific_cumulative[k] = d_t
 
-            correct_distr, new_loc, new_gen = corrector(district, ideal_distribution,
+            correct_distr, new_loc, new_gen = corrector(district, ideal_distrib,
                                                         distributions,
                                                         specific_cumulative, *general_info)
 
@@ -201,7 +207,6 @@ class lanes(type):
             distribution, info = self.propose(first_input)
             return f(self, lane_name, info, distribution=distribution)
 
-
     @classmethod
     def parse_lane_only(mcs, lane_name, *, distribution, **kwargs):
         """
@@ -246,10 +251,20 @@ class lanes(type):
             + Per ogni linea controlla che il valore in una colonna rispetti un criterio
         """
 
-        def distribution_derive(locs, source_df):
-            return source_df
+        if 'take' in selector:
+            fun_distr = src.utils.parse_row_selector_take(**selector)
+        else:
+            fun_distr = src.utils.parse_row_selector_value(**selector)
 
-        return key, distribution_derive
+        def distribution_derive(source_df):
+            filtered = fun_distr(source_df)
+            df = filtered[[key]]
+            if type(seats) == int:
+                df['Seats'] = seats
+            elif type(seats) == str:
+                df['Seats'] = filtered[seats]
+
+        return key, distribution_derive # distribution_derive è una funzione
 
     @classmethod
     def parse_propose_function(mcs, source, distribution, info, info_key=None, **kwargs):
@@ -261,32 +276,41 @@ class lanes(type):
         info_key: se la chiave delle info è diversa dalla chiave della distribuzione
         """
 
-        def return_function_propose(locs, *args, **kwargs):
-            data = source(locs, )
-            return distr, general_information, specific_information
+        def distribution_list(df):
+            return df[distribution]
+
+        if type(distribution) == list:
+            distr_fun = distribution_list
+            key_d = distribution[0]
+        else:
+            key_d, distr_fun = mcs.parse_propose_distribution_dict(**distribution)
+
+        if info_key is None:
+            info_key = key_d
+
+        def return_function_propose(self, kind, *args, **kwargs):
+            data = source(locals())
+
+            info_dict = {}
+
+            for s in data.iterrows():
+                info_dict[s[info_key]] = {k: s[k] for k in info}
+
+            return distr_fun(data), info_dict
 
         return return_function_propose
-
-    @classmethod
-    def parse_distribution_dict(mcs, key, seats, selector):
-        """
-        Quando distribution è un dict usa questa funzione
-
-        Key: la chiave
-        Seats:
-           + Intero
-           + Source: funzione che restituisce un intero
-           + Stringa che indica una colonna
-        Selector: (usa src.utils.selectors)
-        """
-
-        def return_distribution_fun(locs, data):
-            return distribution
-
-        return key, return_distribution_fun
 
     @classmethod
     def parse_propose(mcs, configuration):
         """
         Receives the propose dict, returns the propose function
         """
+
+        fun_list = map(lambda x: (x[0], mcs.parse_propose_function(**x[1])), configuration.items())
+
+        fun_map = {n: f for n, f in fun_list}
+
+        def propose(self, name, *args, **kwargs):
+            return fun_list[name](self, name, *args, **kwargs)
+
+        return propose
