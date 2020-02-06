@@ -2,7 +2,9 @@
 import pandas as pd
 import src.GlobalVars
 import src.utils
+from src import Commons
 
+commons = Commons
 
 class lanes(type):
     def __new__(mcs, *args, lane=None, lanes_propose=None, **kwargs):
@@ -12,7 +14,24 @@ class lanes(type):
         if lanes_propose is None:
             lanes_propose = {}
 
-        return  super().__new__(mcs, *args, **kwargs)
+        list_lanes = [i for i in lane.items()]
+        fun_lanes = {n: mcs.parse_lane_fun(n, **kws) for n, kws in list_lanes}
+
+        o_lanes = args[2].get('exec_lane', lambda *a, **k: None)
+
+        def new_exec(self, name, *args, **kwargs):
+            if name not in fun_lanes:
+                return o_lanes(self, name, *args, **kwargs)
+            return fun_lanes[name](self, name, *args, **kwargs)
+
+        args[2]['exec_lane'] = new_exec
+        args[2]['propose'] = mcs.parse_propose(lanes_propose, args[2].get('propose', lambda *a, **kw: None))
+
+        return super().__new__(mcs, *args, **kwargs)
+
+    @staticmethod
+    def parse_conf(conf):
+        return conf
 
     @staticmethod
     def forward_info_gen_distr(tail, lane_name, distribution, *info):
@@ -85,6 +104,7 @@ class lanes(type):
                 new_specific[i] = n_spec
 
             if type(ideal_distr) != str:
+                print("Locals prima di chiamare abcd: ", loc)
                 ideal_distrib = ideal_distr['source'](loc, district)
             if ideal_distr == "$":
                 ideal_distrib = distribution
@@ -301,7 +321,7 @@ class lanes(type):
         return return_function_propose
 
     @classmethod
-    def parse_propose(mcs, configuration):
+    def parse_propose(mcs, configuration, old_f):
         """
         Receives the propose dict, returns the propose function
         """
@@ -311,6 +331,10 @@ class lanes(type):
         fun_map = {n: f for n, f in fun_list}
 
         def propose(self, name, *args, **kwargs):
-            return fun_list[name](self, name, *args, **kwargs)
+            print("Fun_map: ", fun_map)
+            if name not in fun_map:
+                print("Old_list")
+                return old_f(self, name, *args, **kwargs)
+            return fun_map[name](self, name, *args, **kwargs)
 
         return propose

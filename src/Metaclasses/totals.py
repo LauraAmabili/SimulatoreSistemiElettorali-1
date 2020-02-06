@@ -7,6 +7,9 @@ import pandas as pd
 import src.GlobalVars
 import src.utils
 from src.utils import *
+from src import Commons
+commons = Commons
+
 
 class totals(type):
     
@@ -23,7 +26,7 @@ class totals(type):
         if totals_support is None:
             totals_support = {}
 
-        totals = {k: mcs.parse_total_proper(k, **v) for k, v in totals.items()}
+        totals = {k: mcs.parse_total_proper(k, **v)[1] for k, v in totals.items()}
         supports = {k: mcs.parse_total_support(**v) for k, v in totals_support.items()}
 
         old_tots = args[2].get('totals', lambda *x, **w: print(x, w))
@@ -180,7 +183,7 @@ class totals(type):
             return transform_support
 
     @classmethod
-    def parse_combination(mcs, totals=True, *, function, merge_keys=None, keys, args, **kwargs):
+    def parse_combination(mcs, totals=True, *, function, merge_keys=None, keys=None, args, **kwargs):
         """
         Se totals è true allora alle funzioni sotto passa gli sbarramenti altrimenti no
 
@@ -221,6 +224,9 @@ class totals(type):
                 frame = functools.reduce(lambda a, b: pd.merge(a, b, on=list(merge_keys)), dfs)
             else:
                 frame = dfs[0]
+            if len(dfs) == 0:
+                return fun(*scs)
+
             gps = frame.groupby(list(keys))
             res = []
             for g, f in gps:
@@ -241,6 +247,7 @@ class totals(type):
 
         if totals:
             def comb_totals(locs, *sbarramenti, **kwargs):
+                print("Locs before passing to source: (250)", locs)
                 act_dataframes = [i(locs, *sbarramenti, **kwargs) for i in dataframes]
                 act_series     = [i(locs, *sbarramenti, **kwargs) for i in series]
                 act_scalars    = [i(locs, *sbarramenti, **kwargs) for i in scalars]
@@ -249,6 +256,7 @@ class totals(type):
             return comb_totals
 
         def comb_support(locs, *args, **kwargs):
+            print("Locs before passing to source: (259)", locs)
             act_dataframes = [i(locs, **kwargs) for i in dataframes]
             act_series = [i(locs, **kwargs) for i in series]
             act_scalars = [i(locs, **kwargs) for i in scalars]
@@ -281,14 +289,20 @@ class totals(type):
         f = mcs.parse_total_support(True, **kwargs) # funzione che accetta locals, *args e **kwargs
 
         def totals(self, type, *sbarramenti, **kwargs):
-            res = f(locals(), *sbarramenti, **kwargs)
+            res = f({'self': self}, *sbarramenti, **kwargs)
 
-            columns = res.columns()
+            print(res)
+
+            columns = res.columns
+
             def apply_filter(row):
                 polEnt = src.GlobalVars.Hub.get_instance("PolEnt", row[columns[0]])
-                return polEnt.filter(self, type, row, res)
+                return polEnt.filter(self, type, row, res, sbarramenti=sbarramenti)
 
-            return res[res.apply(apply_filter, axis=1)]
+            if len(sbarramenti)>0:
+                return res[res.apply(apply_filter, axis=1)]
+            else:
+                return res
 
         return tot_name, totals
 
@@ -307,10 +321,29 @@ class totals(type):
             restrict = True
             rename.update(ren_cols)
 
-        def totals_support(self, *args, **kwargs):
-            pass
+        if type == 'aggregate':
+            f_to_c = mcs.parse_aggregate(totals, **kwargs)
+        elif type == 'transform':
+            f_to_c = mcs.parse_transform(totals, **kwargs)
+        elif type == 'combine':
+            f_to_c = mcs.parse_combination(totals, **kwargs)
 
-        return totals_support
+        def totals_support(locs, *args, **kwargs):
+            print("Total supports locs (332): ", locs)
+            res = f_to_c(locs, *args, **kwargs)
+            if len(columns) > 0:
+                res = res[columns]
+            if len(rename) > 0:
+                res = res.rename(columns=rename)
+            return res
+
+        if totals:
+            return totals_support
+
+        def tots_sup_self(self, *args, **kwargs):
+            return totals_support({'self':self}, *args, **kwargs)
+
+        return tots_sup_self
 
     @classmethod
     def parse_conf(mcs, configuration):

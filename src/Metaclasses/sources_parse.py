@@ -29,7 +29,7 @@ def function_arg_parser(source_parser, name, args=None,
         eff_args = [i(local, *n_args, **n_kwargs) for i in args]
         eff_kwargs = {k: v(local, *n_args, **n_kwargs) for k, v in kwargs.items()}
 
-        eff_args = list(n_args) + eff_args
+        eff_args = eff_args + list(n_args)
         eff_kwargs.update(n_kwargs)
 
         globs = globals()
@@ -77,6 +77,9 @@ def source_parse(configuration, in_source=False):
         def simple_res(*args, **kwargs):
             return configuration
         return simple_res
+
+    if 'source' in configuration:
+        return source_parse(configuration['source'], in_source)
 
     t = configuration['type']
     if t == 'fun':

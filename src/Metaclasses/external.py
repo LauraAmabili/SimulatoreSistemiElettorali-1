@@ -2,7 +2,8 @@ from copy import deepcopy
 import pandas as pd
 import src.utils
 import src.GlobalVars
-
+from src import Commons
+commons = Commons
 
 class external(type):
     """
@@ -50,6 +51,10 @@ class external(type):
         print(accessors, providers)
 
         return super().__new__(mcs, *args, **kwargs)
+
+    @staticmethod
+    def parse_conf(conf):
+        return conf
 
     @staticmethod
     def gen_accessors(conf):

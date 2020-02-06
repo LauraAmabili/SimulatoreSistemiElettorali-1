@@ -1,0 +1,72 @@
+generic snippets:
++ var definition (define a variable from the context)
++ function call (information to generate a series of arguments and call a function with those
+                 arguments and then save the result in a local variable
+	
+
+prefixes:
+@name: When I am defining a dictionary to be passed or for some other reasong this references name
+as a key in the dictionary
+
+Esempio per circoscrizione
+
+defined elsewhere:
++ sub_class = "Plurinominale"
+
+exec_lane:
+	+ proposal information:
+		+ general:
+			+ var definitions using general information
+		+ local:
+			+ var definitions where I assume a variable exists called
+			  district (meaning the district targeted)
+	+ ideal information:
+		+ var definitions
+		? the assumption is that the last var definition is a dataframe with the perfect
+		  distribution
+
+		? After a var definition I can put an element of the form:
+		+ "Key"
+		   (+ "Column" => "Column_new")+
+		? This will assume the previous variable is a dataframe and for each row
+		  I will add to the informations to forward (in particular to the cell
+		  in column "Key" the content of the cell in column "Column" using key
+		  "Column_new"
+		? The information will be common to Parties in all the downstreams
+	
+	+ correction information:
+		? columns derived from the dictionary, two types, one references the party,
+		  the other the district
+		+ (district|party) key => column name
+		+ function call, first argument (positional) will be this dataframe above
+                                 result will be assumed to be a dataframe and stored in the
+				 variable "corrected_dataframe"
+				 second positional argument will be the ideal distribution
+	+ information:
+		? Information from the proposals should not be automatically forwarded,
+		  however here I can define which ones, possibly renamed to forward
+		+ nome (=> nuovo_nome)?
+		? Check in every subdictionary received from proposal and possibly pass it on
+		
+		+ var definitions followed by a specification like in "ideal information"
+
+	+ forwarding
+		? If this is the tail then I need to distribute the information, can be authomatic
+		? Else:
+		? I will need to take the corrected distribution and group by some column
+		+ Groupby: "column"
+		? Then from the grouping 
+
+		? If this is the tail I will call on 
+
+### Notes on the information to forward
+
+Except for the head lane I get an information dictionary from above, this will be forwarded
+
+While generating the ideal distribution I generate new information, this will be added since it's
+common for all subsection
+
+When correcting I might generate new information, this is added only to the information forwarded
+to specific subsections
+
+To optimize memory usage the information shouldn't be a dictionary but a pair, FUTURE FEATURE

@@ -2,6 +2,8 @@
 import pandas as pd
 import src.GlobalVars
 
+from src import Commons
+commons = Commons
 
 class superdivision(type):
     """
@@ -49,7 +51,7 @@ class superdivision(type):
 
             # functions ha una lista di dizionari {name: nome_funz, source: <funzione>}
             for i in info['functions']:
-                args[2][f"subs_{i['name']}"] = superdivision.generate_accessor(info['type'],
+                args[2][f"subs_{name}_{i['name']}"] = superdivision.generate_accessor(info['type'],
                                                                                i['source'])
 
         kwargs['external'] = dict_external
@@ -72,10 +74,11 @@ class superdivision(type):
         """
         def accessor(self, *args, **kwargs):
             lis = src.GlobalVars.Hub.get_subdivisions(self, classe_oggetti)
-            lis_obj = map(lambda sub: src.GlobalVars.Hub.get_instance(classe_oggetti, sub), lis)
-            print("sup_accessor: ",lis_obj)
-            print("soruce: ", source)
-            lis_res = list(map(lambda s: source({'self':s}, *args, **kwargs), lis_obj))
+            lis_obj = [src.GlobalVars.Hub.get_instance(classe_oggetti, sub) for sub in lis]
+            print("sup_accessor: ", lis_obj)
+            print("source: ", source)
+            lis_res = [source({'self':s}, *args, **kwargs) for s in lis_obj]
+            # list(map(lambda s: source()({'self':s}, *args, **kwargs), lis_obj))
             if type(lis_res[0]) == int:
                 res = sum(lis_res)
             elif type(lis_res[0]) == pd.DataFrame:
@@ -111,43 +114,3 @@ class superdivision(type):
             configuration['subdivisions'][sub_name]['functions'] = functions
 
         return configuration
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
