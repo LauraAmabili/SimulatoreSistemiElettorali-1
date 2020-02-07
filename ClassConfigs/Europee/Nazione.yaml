@@ -1,0 +1,24 @@
+lane:
+  lista:
+    node_type: head
+    order_number: 1
+    sub_level: Circoscrizione
+    first_input: ideale_liste # Distribuzione: quanti seggi ad ogni lista
+                              # Informazioni:
+                              #   Partito:
+                              #     + VotiPartito
+    operations:
+      - collect_type: liste # Alla propose dovrà essere passato:
+                            #     + Dizionari info generali
+                            #     + Distribuzione ideale
+                            # E restituirà:
+                            #     + Distribuzione
+                            #     + Per ogni partito nelle informazioni ci sarà il resto della divisione effettuata
+        ideal_distribution: $
+        corrector: Commons.correct_europee # Prende la distribuzione ideale e usa i resti per aggiungere seggi
+      - collect_type: candidati # Per ogni candidato tira su le informazioni di quante preferenze ha ricevuto
+        ideal_distribution: $
+        corrector: Commons.no_op # Una funzione che non fa' nulla
+        forward_distribution: True  # Invece di usare la distribuzione concordata con i livelli inferiori usa la
+                                    # distribuzione precedente. Questo mi permette di accumulare informazioni senza
+                                    # toccare la distribuzione di seggi

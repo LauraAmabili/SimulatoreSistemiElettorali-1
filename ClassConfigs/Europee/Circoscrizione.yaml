@@ -1,0 +1,32 @@
+metaclasses:
+  - superdivision
+  - totals
+  - external
+
+totals: # In questa sezione definisco le funzioni che aggregano e manipolano i dataframe rappresentanti i voti espressi
+        #
+  lista:
+    type: aggregate # Aggregate prende un dataframe che potrebbe contenere dati duplicati e aggrega i dati aventi la
+                    # stessa chiave
+    source: # la sorgente da cui ricavare i dati su cui operare
+      type: fun # prende i dati da una funzione
+      name: self.subs_regioni_voti_liste # la funzione da chiamare
+      columns:
+        - Lista -> Partito
+        - Voti
+    keys: # Le chiavi su cui aggregare
+      - Partito
+    ops: # Le operazioni da effettuare
+      Voti: sum # Somma i valori della colonna Voti
+
+  candidato:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_regioni_candidati
+    keys:
+      - Candidato
+    ops:
+      Voti: sum
+
+totals_support:

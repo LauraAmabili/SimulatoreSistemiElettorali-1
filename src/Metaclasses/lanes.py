@@ -15,11 +15,20 @@ class lanes(type):
             lanes_propose = {}
 
         list_lanes = [i for i in lane.items()]
-        fun_lanes = {n: mcs.parse_lane_fun(n, **kws) for n, kws in list_lanes}
+        fun_lanes = {n: mcs.parse_lane_fun(n, **kws, class_name=args[0]) for n, kws in list_lanes}
+        # fun lanes è un dizionario di funzioni che accettano:
+        # + self
+        # + lane
+        # + *information (solo node e tail)
+        # + distribution (kwarg) (solo node e tail)
 
         o_lanes = args[2].get('exec_lane', lambda *a, **k: None)
 
         def new_exec(self, name, *args, **kwargs):
+            """
+            args sono le informazioni
+            kwargs contiene solo (opzionalmente) la distribuzione
+            """
             if name not in fun_lanes:
                 return o_lanes(self, name, *args, **kwargs)
             return fun_lanes[name](self, name, *args, **kwargs)
@@ -59,8 +68,22 @@ class lanes(type):
 
     @classmethod
     def parse_operation_lane(mcs, sub_level, *,
-                             collect_type, ideal_distribution, corrector, collect_constraints=None, **kwargs):
+                             collect_type, ideal_distribution, corrector, collect_constraints=None,
+                             forward_distribution=False, **kwargs):
         """
+        sub_level: Il livello inferiore della lane
+        collect_type: il tipo di propose che sarà chiamato sui livelli inferiori
+        ideal_distribution:
+            + '$': La distribuzione precedente
+            + str: Il tipo di propose da chiamare
+            + dict: dict['source'] è la funzione da chiamare
+        corrector: la funzione da chiamare per avere la correzione
+        collect_constraints:
+            + None
+            + '$': la distribuzione precedente
+            + str: il tipo di propose da chiamare su self
+        forward_distribution: se True allora rende irrilevanti le operazioni sulla distribuzione
+
         Genera la funzione di una singola operazione, accetta:
             + locs
             + prev_distribution
@@ -75,41 +98,65 @@ class lanes(type):
         ideal_distr = ideal_distribution
         corrector = eval(corrector)
 
-        def operation_fun(loc, specific_info, *general_info, distribution):
+        def operation_fun(loc, specific_info, info_district, *general_info, distribution):
+            """
+            loc: Il namespace locale
+            specific_info: le informazioni specifiche preesistenti (un dizionario per ogni sottolivello)
+            info_district: informazioni preesistenti per il livello corrente, possono essere modificate
+            general_info: una lista di informazioni generiche, non modificare
+            distribution: un dataframe con due colonne [Elettore, Seggi] (o equivalenti)
+            """
 
             district = eval("self", globals(), loc)
 
             subs = src.GlobalVars.Hub.get_subdivisions(district, sub_level)
-
-            def get_proposal(name):
-                s = src.GlobalVars.Hub.get_instance(sub_level, name)
-                if collect_constraints is None:
-                    distr, loc_info_new = s.propose(collect_type)
-                elif collect_constraints == '$':
-                    constr = distribution.get(name, pd.DataFrame())
-                    distr, loc_info_new = s.propose(collect_type, constr)
-                else:
-                    constr = district.propose(collect_constraints)
-                    distr, loc_info_new = s.propose(collect_type, constr)
-
-                return distr, loc_info_new
-
-            distributions = {}
-            new_general = {}
-            new_specific = {}
-            print("line 75, subs= ", subs)
-            for i in subs:
-                n_dist, n_spec = get_proposal(i)
-                distributions[i] = n_dist
-                new_specific[i] = n_spec
+            gen_info_new = {}
 
             if type(ideal_distr) != str:
                 print("Locals prima di chiamare abcd: ", loc)
-                ideal_distrib = ideal_distr['source'](loc, district)
-            if ideal_distr == "$":
-                ideal_distrib = distribution
+                ideal_distrib_dynamic = ideal_distr['source'](loc, district)
+            elif ideal_distr == "$":
+                ideal_distrib_dynamic = distribution
             else:
-                ideal_distrib = district.propose(ideal_distr)
+                ideal_distrib_dynamic, gen_info_new = \
+                    district.propose(ideal_distr, *general_info, distribution=distribution)
+
+            for k, v in gen_info_new.items():
+                d = info_district.get(k, {})
+                d.update(v)
+                info_district[k] = d
+            #
+            # TODO: il meccanismo con cui passo le informazioni generali è un disastro
+            #
+            general_info_lower_lvl = [info_district] + list(general_info)
+
+            def get_proposal(name, *gen_info):
+                s = src.GlobalVars.Hub.get_instance(sub_level, name)
+                if collect_constraints is None:
+                    distr, loc_info_new = s.propose(collect_type, {}, *general_info_lower_lvl, distribution=ideal_distrib_dynamic)
+                elif collect_constraints == '$':
+                    constr = distribution.get(name, pd.DataFrame())
+                    distr, loc_info_new = s.propose(collect_type, {}, *general_info_lower_lvl,
+                                                    constraint=constr,
+                                                    distribution=ideal_distrib_dynamic)
+                else:
+                    constr = district.propose(collect_constraints, *general_info_lower_lvl, distribution=ideal_distrib_dynamic)
+                    distr, loc_info_new = s.propose(collect_type, {}, *general_info_lower_lvl,
+                                                    constraint=constr,
+                                                    distribution=ideal_distrib_dynamic)
+
+                return distr, loc_info_new
+            # FIXME: AGGIUSTARE TUTTO QUI
+            #        PASSO LOCAL, DISTRIC, GENERAL RICEVO NEW LOCAL DA PROPOSE, NEW LOC E NEW DISTRICT DA CORRECT
+            o_distr = distribution
+            distribution = {}
+            new_general = {}
+            new_specific = {}
+            print("line 147, subs= ", subs)
+            for i in subs:
+                n_dist, n_spec = get_proposal(i, *general_info)
+                distribution[i] = n_dist
+                new_specific[i] = n_spec
 
             specific_cumulative = {k: v for k, v in specific_info.items()}
             for k, v in new_specific.items():
@@ -117,9 +164,14 @@ class lanes(type):
                 d_t.update(v)
                 specific_cumulative[k] = d_t
 
-            correct_distr, new_loc, new_gen = corrector(district, ideal_distrib,
-                                                        distributions,
-                                                        specific_cumulative, *general_info)
+            correct_distr, new_loc,  new_gen = corrector(district, ideal_distrib_dynamic,
+                                                        distribution,
+                                                        specific_cumulative, *general_info_lower_lvl)
+
+            for k, v in info_district.items():
+                d = new_gen.get(k, {})
+                d.update(v)
+                new_gen[k] = d
 
             specific_new_cumulated = {k: v for k, v in new_specific.items()}
             for k, v in new_loc.items():
@@ -127,12 +179,20 @@ class lanes(type):
                 d_t.update(v)
                 specific_new_cumulated[k] = d_t
 
-            return correct_distr, specific_new_cumulated, new_gen
+            if forward_distribution:
+                print("Forwarding")
+                return o_distr, specific_new_cumulated, new_gen
+            else:
+                print("Modified distr")
+                return correct_distr, specific_new_cumulated, new_gen
         return operation_fun
 
     @classmethod
-    def parse_ops_lane(mcs, sub_level, *operazioni):
+    def parse_ops_lane(mcs, sub_level, *operations):
         """
+        sub_level: Il livello inferiore
+        operations: una lista di operazioni
+
         Genera una funzione che accetta una distribuzione, le informazioni e restituisce nuove informazioni e una nuova
         distribuzione
 
@@ -141,9 +201,31 @@ class lanes(type):
             generic_info_new
             specific_info_new
         """
-        ops_funcs = list(map(lambda o_d: mcs.parse_operation_lane(sub_level, **o_d), operazioni))
+        ops_funcs = list(map(lambda o_d: mcs.parse_operation_lane(sub_level, **o_d), operations))
+        # ognuna di queste funzioni accetta:
+        # + loc, variabili locali
+        # + specific info: dizionario di informazioni specifiche
+        # + *general_info: lista informazioni comuni TODO: fare in modo che il primo componente sia modificabile
+        # + distribution (kw): la distribuzione precedente
+        #
+        # e restituisce:
+        # + nuova distribuzione
+        # + nuove informazioni specifiche
+        # + nuove informazioni comuni (o informazioni comuni complete?) TODO: far rispettare queste condizioni
 
-        def generated_operations(loc, distribution, district_gen_info, *general_info):
+        def generated_operations(loc, district_gen_info, *general_info, distribution):
+            """
+            loc: il namespace locale
+            distribution: il dataframe [Elettore, Seggi]
+            district_gen_info: le informazioni generiche del distretto
+            general_info: una lista di informazioni comuni
+
+            Restituisce:
+
+            distribution: nuova distribuzione
+            spec_info: Un dizionario su nuove informazioni specifiche ai sottolivelli
+            district_gen_info: Le informazioni comuni a questo distretto
+            """
             spec_info = {}
             for f in ops_funcs:
                 print("Info generic: ", district_gen_info)
@@ -173,9 +255,18 @@ class lanes(type):
     @classmethod
     def parse_lane_tail(mcs, lane_name, *, info_name, **kwargs):
         """
+        lane_name: Il nome della lane
+        info_name: Il nome da dare al nome del distretto nelle informazioni
+
         Genera la funzione che riceve una distribuzione come kwarg, registra le informazioni e distribuisce seggi
         """
         def exec_lane_tail(self, lane, *info, distribution):
+            """
+            lane: nome della lane
+            info: lista di informazioni relative al distretto
+            distribution: dataframe
+            """
+
             info_cumulative = {}
             for dic in info[-1::-1]:
                 for k, inf in dic.items():
@@ -196,31 +287,66 @@ class lanes(type):
     @classmethod
     def parse_lane_node(mcs, lane_name, *, operations, info_name, sub_level, **kwargs):
         """
+        lane_name: Il nome della lane
+        operations: Le operazioni da aggiungere
+        info_name: Il nome da dare al nome del distretto nelle informazioni
+        sub_level: il livello inferiore
+
         Genera la funzione che prende una distribution come kwarg, la processa e inoltra a livelli inferiori
         """
         ops_f = mcs.parse_ops_lane(sub_level, *operations)
+        # Ops f accetta:
+        # + loc
+        # + distribution
+        # + district_gen_info
+        # + *general_info
+        # e restituisce:
+        # + distribution
+        # + spec_info
+        # + district_gen_info
 
-        def exec_lane_node(self, lane, *info, distribution):
-            distr, spec_info, gen_info = ops_f(locals(), distribution, *info)
+        def exec_lane_node(self, lane, district_info, *info, distribution): # il info[0] è locale, quindi modificabile
+            """
+            lane:
+            info:
+            distribution:
+            """
+            distr, spec_info, gen_info = ops_f({'self':self}, district_info, *info, distribution=distribution) #
             subs = src.GlobalVars.Hub.get_subdivisions(self, sub_level)
 
+            distr_info = {k: v for k, v in district_info.items()}
+            for k, v in gen_info.items():
+                d = distr_info.get(k, {})
+                d.update(v)
+                d[info_name] = self.name
+                distr_info[k] = d
+
+            info = [distr_info] + list(info)
+
             rets = []
+            sub_info = {k: v for k, v in
+                        spec_info.items()}  # TODO: distinguere gen_info e loc_info, gen info riguarda il livello superiore
+                                            #       loc_info riguarda il livello che chiamo
+            for sub, sub_inf in sub_info.items():
+                for k, v in sub_inf.items():
+                    v[info_name] = self.name
+
             for i in subs:
-                sub_info = {k: v for k, v in gen_info.items()}
-                for k, v in spec_info.get(i, {}):
-                    s = sub_info.get(k, {})
-                    s.update(v)
-                    s[info_name] = self.name
-                    sub_info[k] = s
                 inst = src.GlobalVars.Hub.get_instance(sub_level, i)
-                rets.extend(inst.exec_lane(lane_name, sub_info, *info, distribution=distr[i]))
+                rets.extend(inst.exec_lane(lane_name, sub_info.get(i,{}), *info, distribution=distr[i]))
         return exec_lane_node
 
     @classmethod
-    def parse_lane_head(mcs, lane_name, *, first_input, **kwargs):
+    def parse_lane_head(mcs, lane_name, *, first_input, order_number, class_name, **kwargs):
         """
+        lane_name:
+        first_input: il nome della propose da usare per primo input
+        order_number: Il numero di priorità, lane con numeri minori vengono eseguite prima di lane con numeri maggiori
+        class_name: il nome della classe
+
         La head, usa distribution per generare una distribuzione ideale e poi la modifica con le operazioni
         """
+        src.GlobalVars.Hub.register_lane(name=lane_name, head_class=class_name, order=order_number)
         f = mcs.parse_lane_node(lane_name, **kwargs)
 
         def exec_head(self, lane):
@@ -228,10 +354,17 @@ class lanes(type):
             return f(self, lane_name, info, distribution=distribution)
 
     @classmethod
-    def parse_lane_only(mcs, lane_name, *, distribution, **kwargs):
+    def parse_lane_only(mcs, lane_name, *, distribution, order_number, class_name, **kwargs):
         """
+        lane_name:
+        distribution: il nome della propose da usare
+        order_number:
+        class_name:
+
         Genera la funzione che fa' tutto in una lane single-step
         """
+
+        src.GlobalVars.Hub.register_lane(name=lane_name, head_class=class_name, order=order_number)
 
         distr_name = distribution
         f = mcs.parse_lane_tail(lane_name, **kwargs)
@@ -261,11 +394,10 @@ class lanes(type):
     @classmethod
     def parse_propose_distribution_dict(mcs, key, seats, selector, **kwargs):
         """
-        Key: la chiave, una stringa
+        key: la chiave, una stringa
         seats:
             + Un intero
             + Una stringa (il valore di una colonna)
-
         selector: filtra le linee, di due tipi
             + Ordina le linee in base ad una colonna e restituisce le prime n
             + Per ogni linea controlla che il valore in una colonna rispetti un criterio
@@ -277,6 +409,9 @@ class lanes(type):
             fun_distr = src.utils.parse_row_selector_value(**selector)
 
         def distribution_derive(source_df):
+            """
+            source_df: dataframe
+            """
             filtered = fun_distr(source_df)
             df = filtered[[key]]
             if type(seats) == int:
@@ -284,13 +419,15 @@ class lanes(type):
             elif type(seats) == str:
                 df['Seats'] = filtered[seats]
 
+            return df
+
         return key, distribution_derive # distribution_derive è una funzione
 
     @classmethod
     def parse_propose_function(mcs, source, distribution, info, info_key=None, **kwargs):
         """
         source: la funzione di partenza
-        distribution: come derivare la distribuzione, può essere una lista di due colonn
+        distribution: come derivare la distribuzione, può essere una lista di due colonne
                       o un dizionario che specifica che colonne prendere e quali righe prendere
         info: quali colonne mettere come informazioni
         info_key: se la chiave delle info è diversa dalla chiave della distribuzione
@@ -304,12 +441,22 @@ class lanes(type):
             key_d = distribution[0]
         else:
             key_d, distr_fun = mcs.parse_propose_distribution_dict(**distribution)
+            # distr_fun accetta un dataframe
 
         if info_key is None:
             info_key = key_d
 
-        def return_function_propose(self, kind, *args, **kwargs):
-            data = source(locals())
+        def return_function_propose(self, kind, *information, constraint=None, distribution=None, **kwargs):
+            """
+            kind: il tipo della propose
+            information: informazioni applicabili al livello
+
+            Restituisce:
+            distribution: dataframe
+            info_dict: Dict[str, Dict[str, obj]]
+            """
+            #TODO: aggiustare cosa prende la propose, idealmente tra i parametri  ... VEDI AUDIO TELEGRAM
+            data = source(locals(), information=information, constraint=constraint, distribution=distribution)
 
             info_dict = {}
 
