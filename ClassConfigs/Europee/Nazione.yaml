@@ -22,3 +22,15 @@ lane:
         forward_distribution: True  # Invece di usare la distribuzione concordata con i livelli inferiori usa la
                                     # distribuzione precedente. Questo mi permette di accumulare informazioni senza
                                     # toccare la distribuzione di seggi
+
+lanes_propose:
+  ideale_liste:
+    # Applica d'hont ai seggi totali e alle liste che superano lo sbarramento
+
+external:
+  seggi:
+    # I seggi assegnati
+
+subdivisions:
+  circoscrizioni:
+    # espone solo totals(liste)

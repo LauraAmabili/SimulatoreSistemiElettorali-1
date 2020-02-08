@@ -1,0 +1,9 @@
+metaclasses:
+  - totals
+  - external
+
+external:
+  voti_liste:
+    # espone i voti per le liste
+  voti_cand:
+    # voti per i candidati

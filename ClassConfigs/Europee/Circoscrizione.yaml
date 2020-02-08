@@ -3,10 +3,12 @@ metaclasses:
   - totals
   - external
 
-totals: # In questa sezione definisco le funzioni che aggregano e manipolano i dataframe rappresentanti i voti espressi
+totals: # In questa sezione definisco le funzioni che aggregano e manipolano i dataframe 
+        # rappresentanti i voti espressi
         #
-  lista:
-    type: aggregate # Aggregate prende un dataframe che potrebbe contenere dati duplicati e aggrega i dati aventi la
+  liste:
+    type: aggregate # Aggregate prende un dataframe che potrebbe contenere dati duplicati e aggrega 
+                    # i dati aventi la
                     # stessa chiave
     source: # la sorgente da cui ricavare i dati su cui operare
       type: fun # prende i dati da una funzione
@@ -19,7 +21,7 @@ totals: # In questa sezione definisco le funzioni che aggregano e manipolano i d
     ops: # Le operazioni da effettuare
       Voti: sum # Somma i valori della colonna Voti
 
-  candidato:
+  candidati:
     type: aggregate
     source:
       type: fun
@@ -29,4 +31,20 @@ totals: # In questa sezione definisco le funzioni che aggregano e manipolano i d
     ops:
       Voti: sum
 
-totals_support:
+subdivisions:
+  regioni:
+    # Le regioni, espone totals(candidati) e totals(liste)
+
+lane:
+  lista:
+    node_type: tail
+    info_name: Circoscrizione
+
+lanes_propose:
+  lista:
+    # Riceve tra le informazioni quanti voti ogni partito ha ricevuto in generale e
+    # la distribuzione nazionale dei seggi
+    # Restituisce un dataframe con i seggi interi e i resti nelle informazioni
+  candidati:
+    # Il risultato di distribuzione sarà ignorato, serve solo per assegnare ai candidati i loro
+    # numeri di preferenze espresse
