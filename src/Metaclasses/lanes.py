@@ -42,30 +42,6 @@ class lanes(type):
     def parse_conf(conf):
         return conf
 
-    @staticmethod
-    def forward_info_gen_distr(tail, lane_name, distribution, *info):
-        """
-        La funzione chiamata da lane_tail e lane_only passando self, distribuzione, nome della lane, le info
-        Inoltra le info e genera la lista che lane_exec deve restituire
-        """
-        info_final = dict()
-        for i in info[-1::-1]:
-            for target, info_targ in i.items():
-                info_targ_total = info_final.get(target, dict())
-                info_targ_total.update(info_targ)
-                info_final[target] = info_targ_total
-
-        for el, info in info_final.items():
-            t = src.GlobalVars.Hub.get_instance("PolEnt", el)
-            s = pd.Series(info)
-            t.log(tail, lane_name, s)
-
-        proposals = []
-        for r in distribution.iterrows():
-            proposals.append((tail, lane_name, r.iloc[0], r.iloc[1]))
-
-        return proposals
-
     @classmethod
     def parse_operation_lane(mcs, sub_level, *,
                              collect_type, ideal_distribution, corrector, collect_constraints=None,
@@ -276,7 +252,7 @@ class lanes(type):
             for k in info_cumulative:
                 info_cumulative[k][info_name] = self.name
                 t = src.GlobalVars.Hub.get_instance("PolEnt", k)
-                t.log(self, lane_name, info_cumulative[k])
+                t.log(self, lane_name, **info_cumulative[k])
 
             ret = []
             for r in distribution.iterrows():

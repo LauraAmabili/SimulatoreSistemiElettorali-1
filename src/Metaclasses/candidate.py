@@ -5,27 +5,63 @@ candidates for unaccepted choices
 """
 
 
-class Candidate(type):
-    # Provide: pick_spot(), returns a string
+class candidate(type):
     def __new__(mcs, *args, candidate, **kwargs):
-        _
         o_init = args[2].get('__init__', lambda *s, **k: None)
-
-        def __init__(self, *args_in, **kwargs_in):
+        belongs = candidate.get('belonging', {})
+        def __init__(self, *a, **kwargs):
             self.proposals = []
             self.elected = False
-            return o_init(self, *args_in, **kwargs_in)
 
-        def propose(self, lane, district, iterator):
-            if self.elected:
-                return next(iterator).propose(lane, district, iterator)
+            for name, v in belongs.items():
+                setattr(self, name, kwargs[v])
 
-            self.proposals.append((lane, district, iterator))
+            return o_init(self, *a, **kwargs)
+
+        def propose(self, lane, district, party, iterator, **info):
+            if self.elected is not False:
+                try:
+                    return next(iterator).propose(lane, district, party, iterator, **info)
+                except StopIteration:
+                    return None
+
+            self.proposals.append((lane, district, party, iterator, info))
             return self.name
 
-        def decide(self, lane):
-            # TODO: Decide how to describe the logic
-            pass
+        args[2]['pick'] = mcs.parse_pick(**candidate)
+        args[2]['__init__'] = __init__
+        args[2]['propose'] = propose
+        return super().__new__(mcs, *args, **kwargs)
 
-        # TODO: add functions to arguments and call super().__new__(...)
-        pass
+    @classmethod
+    def parse_pick(mcs, *, info_vars, criteria, **kwargs):
+        if criteria == "first":
+            def pick_fun(proposals):
+                return proposals[0], proposals[1:]
+        elif type(criteria) == list:
+            def pick_fun(proposals):
+                props = proposals
+                for i in criteria:
+                    props = sorted(proposals, key=lambda x: x[4][i])
+                return props[0], props[1:]
+        else:
+            pick_fun = eval(criteria)
+
+        def pick(self):
+            accepted, passed = pick_fun(self.proposals)
+            self.proposals = []
+            others = []
+            for i in passed:
+                l = list(i)
+                try:
+                    others.append(next(l[3]).propose(*l[:4], **l[4]))
+                except StopIteration:
+                    pass
+
+            ret = {'info': list(accepted)[:3],
+                   'name': self.name}
+            for i in info_vars:
+                ret[i] = getattr(self, i, "")
+
+            return ret, others
+        return pick
