@@ -21,16 +21,16 @@ class external(type):
         else:
             external_data = external
 
-        print("External conf: ", external_data)
+        # print("External conf: ", external_data)
 
         init_vars = [(k, d.get('default', ())) for k, d in external_data.items()
                      if (type(d) == dict) and (d.get('init', False))]
-        print("Init vars external: ", init_vars)
+        # print("Init vars external: ", init_vars)
 
         o_init = args[2].get('__init__', lambda *s, **k: None)
 
         def __init__(self, *args_in, **kwargs_in):
-            print("Init operations of external: ")
+            # print("Init operations of external: ")
             for i, default in init_vars:
                 prov = getattr(self, f'give_{i}')
                 if default == ():
@@ -48,8 +48,8 @@ class external(type):
         providers = mcs.gen_providers(external_data)
         args[2].update(providers)
 
-        print("external processed: ", external_data)
-        print(accessors, providers)
+        # print("external processed: ", external_data)
+        # print(accessors, providers)
 
         return super().__new__(mcs, *args, **kwargs)
 
@@ -64,7 +64,8 @@ class external(type):
             source, nome, cols, typ = var
             col_l, col_d = src.utils.parse_columns(cols)
 
-            def acc(self):
+            def acc(self, *args, **kwargs):
+                # print("Acc dumping extra args: ", args, kwargs)
                 s = getattr(self, source)
                 if len(col_l) == 0:
                     if typ == "int":
@@ -74,7 +75,6 @@ class external(type):
                         return float(s)
 
                     if typ is not None:
-                        print(dir(src.GlobalVars))
                         return src.GlobalVars.Hub.get_instance(typ, s)
 
                     return deepcopy(s)
@@ -111,12 +111,12 @@ class external(type):
 
         def gen_fun(var):
             def give(self, val):
-                print("Adding ", val, " come ", var)
+                # print("Adding ", val, " come ", var)
                 setattr(self, var, val)
 
             return var, give
 
-        m = map(gen_fun, lis_f)
+        m = list(map(gen_fun, lis_f))
         fs = {}
         for i, f in m:
             fs[f'give_{i}'] = f

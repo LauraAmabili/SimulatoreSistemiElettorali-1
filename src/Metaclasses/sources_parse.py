@@ -1,10 +1,12 @@
 from copy import deepcopy
 import src.utils
+from src import Commons
+commons = Commons
 
 
 def function_arg_parser(source_parser, name, args=None,
                         kwargs=None, **other_confs):
-    print("Parsing fun: ", name, args, kwargs, other_confs)
+    # print("Parsing fun: ", name, args, kwargs, other_confs)
     if args is None:
         args = []
     if kwargs is None:
@@ -25,7 +27,7 @@ def function_arg_parser(source_parser, name, args=None,
     kwargs = {k: source_parser(v, True) for k, v in kwargs.items()}
 
     def return_fun(local, *n_args, **n_kwargs):
-        print("ret_fun_parse:", args)
+        # print("ret_fun_parse:", args)
         eff_args = [i(local, *n_args, **n_kwargs) for i in args]
         eff_kwargs = {k: v(local, *n_args, **n_kwargs) for k, v in kwargs.items()}
 
@@ -33,10 +35,12 @@ def function_arg_parser(source_parser, name, args=None,
         eff_kwargs.update(n_kwargs)
 
         globs = globals()
-        print("Locals prima di cercare la funzione: ", local)
-        print("Cerco funzione: ", fun)
+        globs['Commons'] = src.Commons
+        globs['commons'] = src.Commons
+        # print("Locals prima di cercare la funzione: ", local)
+        # print("Cerco funzione: ", fun)
         f = eval(fun, globs, local)
-        print(f)
+        # print(f)
         return f(*eff_args, **eff_kwargs)
     return return_fun
 
@@ -47,7 +51,7 @@ def attribute_arg_parser(source_parser, name, **other_confs):
     returns the value
     """
     def return_fun(local, *args, **kwargs):
-        print("Locals prima di trovare l'attributo: ", local)
+        # print("Locals prima di trovare l'attributo: ", local)
         return eval(name, globals(), local)
 
     return return_fun
@@ -60,7 +64,7 @@ def kwarg_arg_parser(source_parser, name, dic_name="kwargs", **other_confs):
 
 
 def source_parse(configuration, in_source=False):
-    print("Parsing conf: ", configuration)
+    # print("Parsing conf: ", configuration)
     if not in_source:
         if type(configuration) == list:
             return [source_parse(i, in_source) for i in configuration]
@@ -68,10 +72,10 @@ def source_parse(configuration, in_source=False):
         if type(configuration) != dict:
             return configuration
 
-        print("prova, ", configuration.keys())
+        # print("prova, ", configuration.keys())
         return {k: source_parse(v, k=='source') for k, v in configuration.items()}
 
-    print("In source")
+    # print("In source")
 
     if type(configuration) != dict:
         def simple_res(*args, **kwargs):

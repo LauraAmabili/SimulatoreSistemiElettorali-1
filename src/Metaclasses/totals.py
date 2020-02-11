@@ -29,7 +29,7 @@ class totals(type):
         totals = {k: mcs.parse_total_proper(k, **v)[1] for k, v in totals.items()}
         supports = {k: mcs.parse_total_support(**v) for k, v in totals_support.items()}
 
-        old_tots = args[2].get('totals', lambda *x, **w: print(x, w))
+        old_tots = args[2].get('totals', lambda *x, **w: print("old_totals",x, w))
 
         def totals_f(self, lane, *args, **kwargs):
             if lane not in totals:
@@ -219,7 +219,7 @@ class totals(type):
                 scalars.append(i.get('source'))
 
         def ops(dfs, ses, scs):
-            print("Ops arguments: ", dfs, ses, scs)
+            # print("Ops arguments: ", dfs, ses, scs)
             if len(dfs) > 1:
                 frame = functools.reduce(lambda a, b: pd.merge(a, b, on=list(merge_keys)), dfs)
             else:
@@ -247,7 +247,7 @@ class totals(type):
 
         if totals:
             def comb_totals(locs, *sbarramenti, **kwargs):
-                print("Locs before passing to source: (250)", locs)
+                # print("Locs before passing to source: (250)", locs)
                 act_dataframes = [i(locs, *sbarramenti, **kwargs) for i in dataframes]
                 act_series     = [i(locs, *sbarramenti, **kwargs) for i in series]
                 act_scalars    = [i(locs, *sbarramenti, **kwargs) for i in scalars]
@@ -256,7 +256,7 @@ class totals(type):
             return comb_totals
 
         def comb_support(locs, *args, **kwargs):
-            print("Locs before passing to source: (259)", locs)
+            # print("Locs before passing to source: (259)", locs)
             act_dataframes = [i(locs, **kwargs) for i in dataframes]
             act_series = [i(locs, **kwargs) for i in series]
             act_scalars = [i(locs, **kwargs) for i in scalars]
@@ -289,9 +289,9 @@ class totals(type):
         f = mcs.parse_total_support(True, **kwargs) # funzione che accetta locals, *args e **kwargs
 
         def totals(self, type, *sbarramenti, **kwargs):
-            res = f({'self': self}, *sbarramenti, **kwargs)
+            res = f({'self': self, 'commons':Commons, 'Commons':Commons}, *sbarramenti, **kwargs)
 
-            print(res)
+            # print(res)
 
             columns = res.columns
 
@@ -329,7 +329,7 @@ class totals(type):
             f_to_c = mcs.parse_combination(totals, **kwargs)
 
         def totals_support(locs, *args, **kwargs):
-            print("Total supports locs (332): ", locs)
+            # print("Total supports locs (332): ", locs)
             res = f_to_c(locs, *args, **kwargs)
             if len(columns) > 0:
                 res = res[columns]
@@ -341,7 +341,7 @@ class totals(type):
             return totals_support
 
         def tots_sup_self(self, *args, **kwargs):
-            return totals_support({'self':self}, *args, **kwargs)
+            return totals_support({'self':self, 'commons':Commons, 'Commons':Commons}, *args, **kwargs)
 
         return tots_sup_self
 
@@ -356,13 +356,19 @@ class totals(type):
 
         source = configuration['source']
         new_source = {}
-        for k, v in source.items():
-            if k == "totals":
-                new_source['type'] = 'fun'
-                new_source['name'] = 'self.totals'
-                new_source['args'] = [v] + source.get('args', [])
-            else:
-                new_source[k] = mcs.parse_conf(v)
+        if type(source)!=dict:
+            # print("Strange_source")
+            new_source = source
+        else:
+            for k, v in source.items():
+                if k == "totals":
+                    new_source['type'] = 'fun'
+                    new_source['name'] = 'self.totals'
+                    new_source['args'] = [v] + source.get('args', [])
+                elif (k=="args") and ("args" in new_source):
+                    pass
+                else:
+                    new_source[k] = mcs.parse_conf(v)
 
         for k, v in configuration.items():
             if k == 'source':

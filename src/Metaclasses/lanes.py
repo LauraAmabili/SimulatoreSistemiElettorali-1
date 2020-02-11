@@ -2,6 +2,7 @@
 import pandas as pd
 import src.GlobalVars
 import src.utils
+import src.Commons
 from src import Commons
 
 commons = Commons
@@ -89,7 +90,7 @@ class lanes(type):
             gen_info_new = {}
 
             if type(ideal_distr) != str:
-                print("Locals prima di chiamare abcd: ", loc)
+                # print("Locals prima di chiamare abcd: ", loc)
                 ideal_distrib_dynamic = ideal_distr['source'](loc, district)
             elif ideal_distr == "$":
                 ideal_distrib_dynamic = distribution
@@ -128,7 +129,7 @@ class lanes(type):
             distribution = {}
             new_general = {}
             new_specific = {}
-            print("line 147, subs= ", subs)
+            # print("line 147, subs= ", subs)
             for i in subs:
                 n_dist, n_spec = get_proposal(i, *general_info)
                 distribution[i] = n_dist
@@ -156,10 +157,10 @@ class lanes(type):
                 specific_new_cumulated[k] = d_t
 
             if forward_distribution:
-                print("Forwarding")
+                # print("Forwarding")
                 return o_distr, specific_new_cumulated, new_gen
             else:
-                print("Modified distr")
+                # print("Modified distr")
                 return correct_distr, specific_new_cumulated, new_gen
         return operation_fun
 
@@ -204,9 +205,9 @@ class lanes(type):
             """
             spec_info = {}
             for f in ops_funcs:
-                print("Info generic: ", district_gen_info)
-                print("Info specific: ", spec_info)
-                print("-------------")
+                #print("Info generic: ", district_gen_info)
+                #print("Info specific: ", spec_info)
+                #print("-------------")
                 n_distr, sp_new_cum, new_generic = f(loc, spec_info,
                                                      district_gen_info, *general_info,
                                                      distribution=distribution)
@@ -255,7 +256,7 @@ class lanes(type):
                 t.log(self, lane_name, **info_cumulative[k])
 
             ret = []
-            for r in distribution.iterrows():
+            for _, r in distribution.iterrows():
                 ret.append((self, lane_name, r.iloc[0], int(r.iloc[1])))
             return ret
         return exec_lane_tail
@@ -287,7 +288,7 @@ class lanes(type):
             info:
             distribution:
             """
-            distr, spec_info, gen_info = ops_f({'self':self}, district_info, *info, distribution=distribution) #
+            distr, spec_info, gen_info = ops_f({'self':self, 'commons':Commons, 'Commons':Commons}, district_info, *info, distribution=distribution) #
             subs = src.GlobalVars.Hub.get_subdivisions(self, sub_level)
 
             distr_info = {k: v for k, v in district_info.items()}
@@ -310,6 +311,7 @@ class lanes(type):
             for i in subs:
                 inst = src.GlobalVars.Hub.get_instance(sub_level, i)
                 rets.extend(inst.exec_lane(lane_name, sub_info.get(i,{}), *info, distribution=distr[i]))
+            return rets
         return exec_lane_node
 
     @classmethod
@@ -328,7 +330,7 @@ class lanes(type):
         def exec_head(self, lane):
             distribution, info = self.propose(first_input)
             return f(self, lane_name, info, distribution=distribution)
-
+        return exec_head
     @classmethod
     def parse_lane_only(mcs, lane_name, *, distribution, order_number, class_name, **kwargs):
         """
@@ -354,6 +356,7 @@ class lanes(type):
 
     @classmethod
     def parse_lane_fun(mcs, lane_name, *, node_type, **kwargs):
+        #print("Test")
         """
         Returns the function which is to be called when exec_lane(lane_name, *info, **kwargs)
          is called
@@ -422,6 +425,7 @@ class lanes(type):
         if info_key is None:
             info_key = key_d
 
+
         def return_function_propose(self, kind, *information, constraint=None, distribution=None, **kwargs):
             """
             kind: il tipo della propose
@@ -432,11 +436,12 @@ class lanes(type):
             info_dict: Dict[str, Dict[str, obj]]
             """
             #TODO: aggiustare cosa prende la propose, idealmente tra i parametri  ... VEDI AUDIO TELEGRAM
-            data = source(locals(), information=information, constraint=constraint, distribution=distribution)
+            locs = locals()
+            data = source(locs, information=information, constraint=constraint, distribution=distribution)
 
             info_dict = {}
 
-            for s in data.iterrows():
+            for _, s in data.iterrows():
                 info_dict[s[info_key]] = {k: s[k] for k in info}
 
             return distr_fun(data), info_dict
@@ -454,9 +459,9 @@ class lanes(type):
         fun_map = {n: f for n, f in fun_list}
 
         def propose(self, name, *args, **kwargs):
-            print("Fun_map: ", fun_map)
+            #print("Fun_map: ", fun_map)
             if name not in fun_map:
-                print("Old_list")
+                # print("Old_list")
                 return old_f(self, name, *args, **kwargs)
             return fun_map[name](self, name, *args, **kwargs)
 

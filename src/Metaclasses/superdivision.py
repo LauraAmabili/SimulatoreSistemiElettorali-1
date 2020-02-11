@@ -34,7 +34,7 @@ class superdivision(type):
         """
         Questa metaclasse deve essere prima di external,
         """
-        print("Superdivision configuration: ", subdivisions)
+        # print("Superdivision configuration: ", subdivisions)
 
         if subdivisions is None:
             return super().__new__(mcs, *args, **kwargs)
@@ -55,7 +55,7 @@ class superdivision(type):
                                                                                i['source'])
 
         kwargs['external'] = dict_external
-        print("After superdivision: ", args, kwargs)
+        # print("After superdivision: ", args, kwargs)
         return super().__new__(mcs, *args, **kwargs)
 
     @staticmethod
@@ -73,11 +73,10 @@ class superdivision(type):
         La funzione restituita verrà aggiunta al dizionario che viene passato a type con chiave: subs_nome_funzione
         """
         def accessor(self, *args, **kwargs):
-            lis = src.GlobalVars.Hub.get_subdivisions(self, classe_oggetti)
-            lis_obj = [src.GlobalVars.Hub.get_instance(classe_oggetti, sub) for sub in lis]
-            print("sup_accessor: ", lis_obj)
-            print("source: ", source)
-            lis_res = [source({'self':s}, *args, **kwargs) for s in lis_obj]
+            lis_obj = src.GlobalVars.Hub.get_subdivisions(self, classe_oggetti, instance=True)
+            # print("sup_accessor: ", lis_obj)
+            # print("source: ", source)
+            lis_res = [source({'self':s, 'commons':Commons, 'Commons':Commons}, *args, **kwargs) for s in lis_obj]
             # list(map(lambda s: source()({'self':s}, *args, **kwargs), lis_obj))
             if type(lis_res[0]) == int:
                 res = sum(lis_res)
@@ -90,27 +89,5 @@ class superdivision(type):
         return accessor
 
     @staticmethod
-    def transform_func(fun_conf):
-        print("fun conf: ",fun_conf)
-        dic = {}
-        fun_conf['type'] = 'fun'
-        dic['name'] = fun_conf.pop('name')
-        dic['source'] = fun_conf
-        return dic
-
-    @staticmethod
     def parse_conf(configuration):
-        """
-        Deve essere eseguito prima di totals.parse_conf
-        """
-        if 'subdivisions' not in configuration:
-            return configuration
-
-        for sub_name, opts in configuration['subdivisions'].items():
-            functions = opts['functions']
-            print("Functions before: ", functions)
-            functions = list(map(superdivision.transform_func, functions))
-            print("Functions after: ", functions)
-            configuration['subdivisions'][sub_name]['functions'] = functions
-
         return configuration
