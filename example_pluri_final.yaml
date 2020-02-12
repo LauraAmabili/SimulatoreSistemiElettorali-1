@@ -1,7 +1,0 @@
-lane:
-        plurinominale:
-                node_type: tail
-                first_input: kwarg
-                info_name: Plurinominale
-                operations: None # Essendo in coda posso semplicemente usare la distribuzione
-
