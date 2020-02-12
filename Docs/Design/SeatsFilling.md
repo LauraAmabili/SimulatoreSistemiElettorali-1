@@ -36,7 +36,6 @@ and will call the `.elect(lane, self, seats, **args)` on the element of the firs
 
 If the element is a 
 
-
 -----------
 
 How to handle the open list proportional?
@@ -69,22 +68,57 @@ decision
 4. I aggregate all the elected candidates and go on as planned
 
 **Problem**: I might need to wait for all leaves to run "elect" before I can return the list of 
-candidates.
+candidates. This is because I might need some data from previous stages in the lane and not all
+lanes might be on the same stage. In fact they probably aren't.
 
-**Possible Solution**: Return an iterator and make sure they are only called after every iterator
-has been returned
+**Possible Solution**: The return of the lane is not a list of names but a list of delayed calls
+so that I can group them all (this way I'm sure all data has been processed). These calls
+(simple null lambdas) will return a list of candidates
 
+---------
 
+How to provide political entities the information they need. For instance in the case of the
+italian electoral system a party in order to present candidates needs to know a certain amount
+of information about its own electoral results as well as the results of its coalition partners
+and of the coalition at large.
 
+**Candidates overview**: a political entity will have a function called candidates overview
+which takes the data provided by the lane operations (see interfaces.md, the section about lanes
 
+So for instance the leaf of the lane will tell the coalition about the margins obtained in the 
+previous stages (which plurinom, which circoscrizione, what margins, etc), it'll tell the party
+about similar results and the candidates (where supported) about similar results
 
+Example:
 
+Coalizione di CSX avrà:
 
+`Pluri1 - 0.4 - Non util - Circ1 - 0.1 - Util`
 
+PD avrà:
 
+`Pluri1 - 0.1 - Util - Circ1 - 0.4 - Non util`
 
+Un candidato solo plurinom avrà:
 
+`Pluri1 - 1 - self`
 
+Un candidato misto avrà:
+
+```
+Pluri1 - 2
+Pluri1 - Uni1 - 0.1 - Non eletto 
+```
+
+Posso poi fare i merge dei DF, quindi fare merge dei vari dataframe in base alla gerarchia
+
+**N.B.**: L'aggregazione incorpora la sottoclasse
+
+When a party needs to elect a number of members it knows in which district, retrieves the 
+dataframe and applies an appropriate function, then takes the top n rows
+
+This also handles different kinds of lanes intermingling since the function to provide this
+information is unique. The function to retrieve it might be specialized by lane though
 
 
 

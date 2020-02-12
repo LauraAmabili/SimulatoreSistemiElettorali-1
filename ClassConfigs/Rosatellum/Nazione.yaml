@@ -1,0 +1,15 @@
+lane:
+  plurinominale:
+    node_type: head
+    order_number: 2
+    sub_level: Circoscrizione
+    first_input: elettori # propose
+    operations:
+      - collect_type: elettori
+        ideal_distr: $
+        corrector: commons.correct
+      - collect_type: liste
+        collect_constraints: $
+        ideal_distr: liste
+        corrector: commons.correct
+    info_name: Nazione

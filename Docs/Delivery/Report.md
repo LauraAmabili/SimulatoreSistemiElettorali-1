@@ -188,7 +188,41 @@ conflitti tra suddivisioni diverse e rende più astratta la definizione dei ruol
 esecuzione ho la garanzia che le lane precedenti hanno già eletto tutti i seggi di competenza
 + rispecchia il modello naturalmente adottato quando le leggi elettorali vengono scritte
 
+# Esempio di utilizzo
 
+Come esempio di utilizzo ho simulato le elezioni europee del 2019 in Italia, ho ricavato i dati dal portale open
+data del ministero dell'interno e modellato il sistema elettorale ai livelli di:
++ Nazione
++ Circoscrizione
++ Regione
 
+Ho poi usato i dataset di cui sopra per generare i file di instanziazione e i file `.csv` contenuti in `Data`
 
+Dopo aver generato i risultati secondo la legge elettorale normale ho simulato la stessa elezione applicando
+però una soglia di sbarramento del 10% invece del 4%, mediante la modifica della classe `Partito`
 
+Infine ho simulato il risultato senza soglia (modificando sempre `Partito`) ma eleggendo 96 deputati invece di
+76 (modificando `Nazione.yaml` in `Instances`)
+
+I risultati sono rappresentati graficamente nell'immagine seguente dove i tre scenari sono disposti in senso
+orario.
+
+Sfortunatamente i dati che ho utilizzato sono incompleti e mancano i voti nelle regioni Lazio e Puglia, questo ha
+causato uno sfasfamento nella distribuzione finale dei voti, assegnando seggi in più a Lega e Partito Democratico e
+un difetto di seggi per Fratelli d'Italia e Forza Italia
+
+![image](sim.png)
+
+I file di configurazione sono disponibili nella cartella e si può effettuare la simulazione eseguendo da una
+console python i seguenti comandi:
+
+```python
+import src
+lis, cands = src.run_simulation('ExampleDelivery')
+res_dict_party = {}
+for _, _, party, seats in lis:
+    s_o = res_dict_party.get(party, 0)
+    s_o += seats
+    res_dict_party[party] = s_o
+print(res_dict_party)
+```

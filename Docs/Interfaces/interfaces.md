@@ -15,6 +15,8 @@ might be needed by functions like those determining if a party passed a threshol
 + `addDerivedClass(original: str, derived: str)`: not to be confused with addSubclass (which is
 related to geographical relationships) this is about class inheritance, when requesting instances
 of the original class all instances of derived classes will also be shown
++ `executeLane(lane: str)`: Starts the lane, this must be outside of the classes because 
+
 
 ## Metaclasses
 

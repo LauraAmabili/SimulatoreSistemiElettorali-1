@@ -1,0 +1,6 @@
+lane:
+        plurinominale:
+                node_type: tail
+                info_name: Plurinominale
+                operations: None # Essendo in coda posso semplicemente usare la distribuzione
+
