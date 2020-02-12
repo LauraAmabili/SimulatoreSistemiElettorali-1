@@ -230,13 +230,15 @@ class lanes(type):
         return generated_operations
 
     @classmethod
-    def parse_lane_tail(mcs, lane_name, *, info_name, **kwargs):
+    def parse_lane_tail(mcs, lane_name, *, info_name, class_name, **kwargs):
         """
         lane_name: Il nome della lane
         info_name: Il nome da dare al nome del distretto nelle informazioni
 
         Genera la funzione che riceve una distribuzione come kwarg, registra le informazioni e distribuisce seggi
         """
+        src.GlobalVars.Hub.add_lane_tail(lane_name, class_name)
+
         def exec_lane_tail(self, lane, *info, distribution):
             """
             lane: nome della lane
@@ -345,7 +347,7 @@ class lanes(type):
         src.GlobalVars.Hub.register_lane(name=lane_name, head_class=class_name, order=order_number)
 
         distr_name = distribution
-        f = mcs.parse_lane_tail(lane_name, **kwargs)
+        f = mcs.parse_lane_tail(lane_name, class_name=class_name, **kwargs)
 
         def exec_only(self, lane):
             distrib, info = self.propose(distr_name)
@@ -443,7 +445,8 @@ class lanes(type):
 
             for _, s in data.iterrows():
                 info_dict[s[info_key]] = {k: s[k] for k in info}
-
+            distr_ret = distr_fun(data)
+            distr_ret = distr_ret[distr_ret.iloc[:, 1] > 0].copy()
             return distr_fun(data), info_dict
 
         return return_function_propose

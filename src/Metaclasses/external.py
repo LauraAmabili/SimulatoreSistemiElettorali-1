@@ -65,7 +65,8 @@ class external(type):
             col_l, col_d = src.utils.parse_columns(cols)
 
             def acc(self, *args, **kwargs):
-                # print("Acc dumping extra args: ", args, kwargs)
+                #print("Acc dumping extra args: ", args, kwargs)
+                print("Accessing", self, self.name, source)
                 s = getattr(self, source)
                 if len(col_l) == 0:
                     if typ == "int":

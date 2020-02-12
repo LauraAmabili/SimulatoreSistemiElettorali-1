@@ -297,7 +297,7 @@ class totals(type):
 
             def apply_filter(row):
                 polEnt = src.GlobalVars.Hub.get_instance("PolEnt", row[columns[0]])
-                return polEnt.filter(self, type, row, res, sbarramenti=sbarramenti)
+                return polEnt.filter(self, total=type, row=row, dataframe=res, sbarramenti=sbarramenti)
 
             if len(sbarramenti)>0:
                 return res[res.apply(apply_filter, axis=1)]

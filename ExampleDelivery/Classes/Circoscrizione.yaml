@@ -1,7 +1,12 @@
 metaclasses:
   - superdivision
   - totals
+  - lanes
   - external
+
+external:
+  regioni:
+    init: True
 
 totals: # In questa sezione definisco le funzioni che aggregano e manipolano i dataframe 
         # rappresentanti i voti espressi
@@ -12,7 +17,7 @@ totals: # In questa sezione definisco le funzioni che aggregano e manipolano i d
                     # stessa chiave
     source: # la sorgente da cui ricavare i dati su cui operare
       type: fun # prende i dati da una funzione
-      name: self.subs_regioni_voti_liste # la funzione da chiamare
+      name: self.subs_regioni_liste # la funzione da chiamare
       columns:
         - Lista -> Partito
         - Voti
@@ -34,6 +39,16 @@ totals: # In questa sezione definisco le funzioni che aggregano e manipolano i d
 subdivisions:
   regioni:
     # Le regioni, espone totals(candidati) e totals(liste)
+    type: Regione
+    functions:
+      - name: liste
+        source:
+          type: fun
+          name: self.get_voti_liste
+      - name: candidati
+        source:
+          type: fun
+          name: self.get_voti_cand
 
 lane:
   lista:
@@ -41,10 +56,33 @@ lane:
     info_name: Circoscrizione
 
 lanes_propose:
-  lista:
+  liste:
     # Riceve tra le informazioni quanti voti ogni partito ha ricevuto in generale e
     # la distribuzione nazionale dei seggi
     # Restituisce un dataframe con i seggi interi e i resti nelle informazioni
+    source:               # Questa funzione restituisce un dataframe da cui estraggo
+                          # informazioni e la distribuzione
+      type: fun                         # Questo source chiama una funzione
+      name: commons.assign_local_seats  # la funzione da chiamare, poiché è in propose riceve tramite kwarg
+                                        # la distribuzione totale e le informazioni, le devo passare solo i voti
+                                        # ricevuti nel sottolivello
+      kwargs:
+        district_votes:
+          source:
+            totals: liste
+    distribution:
+      - Lista   # La colonna chiave
+      - Seggi   # la colonna che indica quanti seggi
+    info:
+      - Resto
+
   candidati:
     # Il risultato di distribuzione sarà ignorato, serve solo per assegnare ai candidati i loro
     # numeri di preferenze espresse
+    source:
+      totals: candidati
+    distribution:
+      - Candidato
+      - Voti
+    info:
+      - Voti

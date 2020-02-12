@@ -1,4 +1,6 @@
 from src import GlobalVars
+from src import Commons
+commons = Commons
 """
 TODO: have the means to receive multiple offers (asynchronously), accept a single offer and propose to the second choice
 candidates for unaccepted choices
@@ -6,15 +8,22 @@ candidates for unaccepted choices
 
 
 class candidate(type):
+    """
+    Candidati hanno due metodi:
+    - propose
+    - pick
+
+    Inoltre gli viene fornito
+    """
+    # TODO
+    # TODO
+    # TODO: gestire candidati e partiti e coalizioni magari come se fosse una subdivision? Posso usare subdivision come per le geoEnt
     def __new__(mcs, *args, candidate, **kwargs):
         o_init = args[2].get('__init__', lambda *s, **k: None)
-        belongs = candidate.get('belonging', {})
+
         def __init__(self, *a, **kwargs):
             self.proposals = []
             self.elected = False
-
-            for name, v in belongs.items():
-                setattr(self, name, kwargs[v])
 
             return o_init(self, *a, **kwargs)
 
@@ -49,8 +58,10 @@ class candidate(type):
 
         def pick(self):
             accepted, passed = pick_fun(self.proposals)
+            accepted = list(accepted)
             self.proposals = []
             others = []
+            self.elected = True
             for i in passed:
                 l = list(i)
                 try:
@@ -58,10 +69,16 @@ class candidate(type):
                 except StopIteration:
                     pass
 
-            ret = {'info': list(accepted)[:3],
+            ret = {'lane': accepted[0],
+                   'district': accepted[1],
+                   'elector': accepted[2],
                    'name': self.name}
             for i in info_vars:
                 ret[i] = getattr(self, i, "")
 
             return ret, others
         return pick
+
+    @classmethod
+    def parse_conf(mcs, conf):
+        return conf

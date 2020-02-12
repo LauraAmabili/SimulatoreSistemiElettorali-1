@@ -1,9 +1,16 @@
+metaclasses:
+  - lanes
+  - superdivision
+  - totals
+  - external
+
 lane:
   lista:
     node_type: head
     order_number: 1
     sub_level: Circoscrizione
-    first_input: ideale_liste # Distribuzione: quanti seggi ad ogni lista
+    info_name: Nazione
+    first_input: liste # Distribuzione: quanti seggi ad ogni lista
                               # Informazioni:
                               #   Partito:
                               #     + VotiPartito
@@ -24,13 +31,65 @@ lane:
                                     # toccare la distribuzione di seggi
 
 lanes_propose:
-  ideale_liste:
+  liste:
     # Applica d'hont ai seggi totali e alle liste che superano lo sbarramento
+    source:
+      type: fun
+      name: self.seggi_lista
+      rename:
+        Votes: Voti
+        Seats: Seggi
+
+    distribution:
+      - Partito
+      - Seggi
+    info:
+      - Voti
 
 external:
   seggi:
     # I seggi assegnati
+    init: True
+    type: int
+
+  circoscrizioni:
+    init: True
 
 subdivisions:
   circoscrizioni:
     # espone solo totals(liste)
+    type: Circoscrizione
+    functions:
+      - name: liste
+        source:
+          totals: liste
+totals:
+  liste:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_circoscrizioni_liste
+    keys:
+      - Partito
+    ops:
+      Voti: sum
+
+totals_support:
+  seggi_lista:
+    source:
+      totals: liste
+      args:
+        - elette
+      rename:
+        Voti: Votes
+    type: transform
+    ops:
+      - type: dataframe
+        source:
+          type: fun
+          name: Commons.distrib_europee
+          kwargs:
+            seats:
+              source:
+                type: fun
+                name: self.get_seggi
