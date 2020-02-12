@@ -46,5 +46,5 @@ class Partito(metaclass=comb_p, **conf):
                 return True
             tot_voti = dataframe['Voti'].sum()
             p_voti = row['Voti']
-            return p_voti > tot_voti*0.10
+            return p_voti > tot_voti*0.04
         return True
