@@ -237,7 +237,27 @@ class lanes(type):
 
         Genera la funzione che riceve una distribuzione come kwarg, registra le informazioni e distribuisce seggi
         """
+        # formato mcs : class ---> nel caso con i dati europei è 'src.comb_Circoscrizione'
+
+        # formato lane_name : string ---> nel caso con i dati europei è 'Lista'
+
+        # formato info_name : string ---> nel caso con i dati europei è 'Circoscrizione'
+
+        # formato class_name : string ---> nel caso con i dati europei è 'Circosrizione'
+
+        # PROBABILMENTE questa riga aggiunge nelle variabili globali
+        # una lane in coda con il nome lane_ name e del tipo class_name
+        # ---> nel caso con i dati europei è una lane Circoscrizione di nome Circoscrizione
+
         src.GlobalVars.Hub.add_lane_tail(lane_name, class_name)
+
+        # questa con i dati europeri viene chiamata 5 volte perchè ci sono
+       # 5 Circoscrizioni, infatti CREDO che la Circoscrizione sia il livello piu basso
+       #
+       # FORSE la lane_tail è la lista
+       # 
+       # viene eseguita una volta per Circoscrizione
+       # essendo chiama dalla terz'ultima riga di parse_lane_node 
 
         def exec_lane_tail(self, lane, *info, distribution):
             """
@@ -246,20 +266,79 @@ class lanes(type):
             distribution: dataframe
             """
 
+            # formato lane : string ---> nel caso dei dati europei è 'lista'
+
+            # formato info, dizionario :
+            #                   - chiave : 'nome_partito'
+            #                   - valore : dict{ 'Resto' : float_valore_resto, 'Nazione' : string_nome_nazione }
+            #                   oppure
+            #                   - chiave : 'nome_candidato'
+            #                   - valore : dict{ 'Voti' : int_numero_voti, 'Nazione' : string_nome_nazione }
+            #
+            # questo formato lo troviamo in exec_lane_node, è lo stesso di sub_info
+
+            # formato distribution : lista di distribuzione dei seggi
+            #           esempio Circoscrizione 'V : ITALIA INSULARE'
+            #                               Indice  Lista                       Seggi
+            #                               0       LEGA SALVINI PREMIER        2
+            #                               1       PARTITO DEMOCRATICO         1
+            #                               2       FRATELLI D'ITALIA           1
+            #                               3       FORZA ITALIA                1
+            #                               4       MOVIMENTO 5 STELLE          2
+
             info_cumulative = {}
+
+            # questo blocco d'istruzioni prende il numero dei voti dati ad ogni singolo
+            # candidato e le mette in info_cumulative   
+
             for dic in info[-1::-1]:
                 for k, inf in dic.items():
                     d_t = info_cumulative.get(k, {})
                     d_t.update(inf)
                     info_cumulative[k] = d_t
+
+             # formato info_cumulative, dizionario :
+            #                   - chiave : 'nome_partito'
+            #                   - valore : dict{    'Voti' : int_numero_totale_voti_parito,
+            #                                       'Resto' : float_valore_resto,
+            #                                       'Nazione' : string_nome_nazione }
+            #                   oppure
+            #                   - chiave : 'nome_candidato'
+            #                   - valore : dict{ 'Voti' : int_numero_voti, 'Nazione' : string_nome_nazione }
+            #
+            # questo formato lo troviamo in info, ma viene aggiunto il campo 'Voti' al dizionario del partito
+
+
+            # questo blocco d'istruzioni aggiunge il campo 'Circoscrizione' al dizionario dei candidati
+            # e CREDO loggi il nome della lane e le info di ogni candidato
             for k in info_cumulative:
                 info_cumulative[k][info_name] = self.name
                 t = src.GlobalVars.Hub.get_instance("PolEnt", k)
                 t.log(self, lane_name, **info_cumulative[k])
 
+            # formato info_cumulative, dizionario :
+            #                   - chiave : 'nome_partito'
+            #                   - valore : dict{    'Voti' : int_numero_totale_voti_parito,
+            #                                       'Resto' : float_valore_resto,
+            #                                       'Nazione' : string_nome_nazione }
+            #                   oppure
+            #                   - chiave : 'nome_candidato'
+            #                   - valore : dict{    'Voti' : int_numero_voti, 
+            #                                       'Nazione' : string_nome_nazione,
+            #                                       'Circoscrizione' : string_nome_circoscrizione }
+            
+
             ret = []
             for _, r in distribution.iterrows():
+                # r.iloc[0] è il nome del partito
+                # r.iloc[1] è il numero di seggi assegnati al partito
+                
+                # questa riga crea i dati finali dei seggi
+                # vedi formato nella prima parte di file OUTPUT (in sublime)
                 ret.append((self, lane_name, r.iloc[0], int(r.iloc[1])))
+            
+             # formato ret, lista :
+            #            - formato elementi : (istanza_Circoscrizione, nome_lane_tail, nome_partito, int_numero_seggi_partito)
             return ret
         return exec_lane_tail
 
@@ -273,6 +352,20 @@ class lanes(type):
 
         Genera la funzione che prende una distribution come kwarg, la processa e inoltra a livelli inferiori
         """
+
+         # formato mcs : classe ---> con i dati europei è src.comb_Nazione
+
+        # formato sub_level : stringa ---> con i dati europei è 'Circoscrizione'
+
+        # formato info_name : stringa ---> con i dati europei è 'Nazione'
+
+        # formato operations, lista :
+        #                       - elementi sono dizionari
+        # [
+        # {'collect_type': 'liste',         'ideal_distribution': '$',  'corrector': 'Commons.correct_europee'                              },
+        # {'collect_type': 'candidati',     'ideal_distribution': '$',  'corrector': 'Commons.no_op',       'forward_distribution': True    }
+        # ]
+
         ops_f = mcs.parse_ops_lane(sub_level, *operations)
         # Ops f accetta:
         # + loc
@@ -290,28 +383,107 @@ class lanes(type):
             info:
             distribution:
             """
+
+            # formato district_info, dizionario :
+            #   - chiave : nome_partito
+            #   - valore : dict{ 'Voti' : int_voti }
+
+            # formato lane : 'lista'
+
+            # formato info : ()
+
+            # formato distribution (NON BEN CAPITO) :
+            #               Partito                     Seggi
+            #       8       LEGA SALVINI PREMIER        30
+            #       12      PARTITO DEMOCRATICO         20
+
+
             distr, spec_info, gen_info = ops_f({'self':self, 'commons':Commons, 'Commons':Commons}, district_info, *info, distribution=distribution) #
+
+            # formato distr, dizionario :
+            #                   - chiave : 'nome_circoscrizione' --> lo trovi in ExampleDelivery/Instances/Nazione.yaml
+            #                   - valore : lista pariti con numero seggi in questo formato :
+            #                                                                       'indice'    'nome_partito'  'int_seggi'
+
+            # formato spec_info, dizionario :
+            #                   - chiave : 'nome_circoscrizione' --> lo trovi in ExampleDelivery/Instances/Nazione.yaml
+            #                   - valore : dizionario :
+            #                                   - chiave : 'nome_partito'
+            #                                   - valore : dict{ 'Resto' : float_valore_resto }
+            #                                   oppure
+            #                                   - chiave : 'nome_candidato'
+            #                                   - valore : dict{ 'Voti' : int_numero_voti }
+
+            # formato gen_info, dizionario :
+            #                       - chiave : 'nome_parito'
+            #                       - valore : dict{ 'Voti' : int_ numero_voti } 
+
             subs = src.GlobalVars.Hub.get_subdivisions(self, sub_level)
 
+            # formato subs : lista contenente i nomi delle suddivisioni dei livelli sottostanti
+            #                   in questo caso noi abbiamo che sub_level = 'Circoscrizioni'
+            #                   quindi ci viene restituito i nomi delle circoscrizioni in ExampleDelivery/Instances/Nazione.yaml
+            #
+            #                   il fatto che il sub_level sia 'Circoscrizioni', secondo me, è dato dal file
+            #                   ExampleDelivery/Instances/Nazione.yaml riga 11
+
+
+            # questa istruzione semplicemente copia district_info in distr_info
             distr_info = {k: v for k, v in district_info.items()}
             for k, v in gen_info.items():
                 d = distr_info.get(k, {})
                 d.update(v)
+                # da questa istruzione aggiunge il campo info_name = 'Nazione'
+                # che era passato come parametro e self.name = 'Italia'
+                # è un attributo della classe
+                #
+                # probabilmente 'Italia' lo ha preso dal primo campo
+                # del file ExampleDelivery/Instances/Nazione.yaml
                 d[info_name] = self.name
                 distr_info[k] = d
+            # è cambiato il formato di distr_info, ha aggiunto la nazione di provenienza del partito
+            # NON PERCHE LO ABBIA FATTO
+            # formato distr_info, dizionario :
+            #                       - chiave : 'nome_parito'
+            #                       - valore : dict{ 'Voti' : int_ numero_voti,
+            #                                        'Nazione' : 'Italia' }
 
+
+            # credo che trasformi semplicemente distr_info da un dizionario ad una lista
             info = [distr_info] + list(info)
 
             rets = []
+
+            # questa istruzione copia spec_info in sub_info
             sub_info = {k: v for k, v in
-                        spec_info.items()}  # TODO: distinguere gen_info e loc_info, gen info riguarda il livello superiore
-                                            #       loc_info riguarda il livello che chiamo
+                        spec_info.items()}  
+            # TODO di Ruffati
+            # TODO: distinguere gen_info e loc_info, gen info riguarda il livello superiore loc_info riguarda il livello che chiamo
+            
+            # è cambiato il formato di subb_info, ha aggiunto la nazione di provenienza del partito e del candidato
+            # ha fatto la stessa cosa di qualche istruzione precedente
+            # CONTINUO A NON CAPIRE PERCHE
             for sub, sub_inf in sub_info.items():
                 for k, v in sub_inf.items():
                     v[info_name] = self.name
 
             for i in subs:
+                # qua prende l'istanza della sottoclasse con il nome 'i'
+                # nel caso con i dati europei passa le varie istanze di Circoscrizione
+                #
+                # 'I : ITALIA NORD-OCCIDENTALE'
+                # 'II : ITALIA NORD-ORIENTALE'
+                # 'III : ITALIA CENTRALE'
+                # 'IV : ITALIA MERIDIONALE'
+                # 'V : ITALIA INSULARE'
                 inst = src.GlobalVars.Hub.get_instance(sub_level, i)
+
+                # IMPORTANTE
+                # questa riga genera parte dell'output finale
+                #
+                # ok, questa riga chiama exec_lane della sottolane
+                # in questo caso genera l'output perchè credo che 'Circoscrizione'
+                # sia la lane_tail e quindi è l'ultimo step che calcola i dati
                 rets.extend(inst.exec_lane(lane_name, sub_info.get(i,{}), *info, distribution=distr[i]))
             return rets
         return exec_lane_node
@@ -326,11 +498,71 @@ class lanes(type):
 
         La head, usa distribution per generare una distribuzione ideale e poi la modifica con le operazioni
         """
+
+        # formato lane_name : string        ---> valore con dati europei è 'lista'
+
+        # formato first_input : string      ---> valore con dati europei è 'liste'
+
+        # formato order_number : int       ---> valore con dati europei è 1
+
+        # formato class_name : string       ---> valore con dati europei è 'Nazione'
+
+        # formato kwatgs : dizionario
+        # {
+        #   'sub_level': 'Circoscrizione', 
+        #   'info_name': 'Nazione', 
+        #   'operations': [
+        #                   {
+        #                       'collect_type': 'liste', 
+        #                       'ideal_distribution': '$', 
+        #                       'corrector': 'Commons.correct_europee'
+        #                   }, 
+        #                   {
+        #                       'collect_type': 'candidati', 
+        #                       'ideal_distribution': '$', 
+        #                       'corrector': 'Commons.no_op', 
+        #                       'forward_distribution': True
+        #                   }
+        #                 ]
+        # }
+        #
+        # questi dati vengono presi dal file in ExampleDelivery/Classes/Nazione.yaml dalla riga 7
+        # da quella riga viene definito tutto :
+        # nome lane, order number, tipo di lane, sublevels, operazioni, e tutti i parametri vari
+
+
+        # questa riga aggiungere la nuova lane alle registro delle lane
         src.GlobalVars.Hub.register_lane(name=lane_name, head_class=class_name, order=order_number)
+
+        # questa riga fa andare la funzione parse_lane_node,
+        # la funzione può essere trovata in questo file,
+        # parsa le info passate
+        #
+        # con i valori delle europee ho mcs         ---> src.comb_Nazione
+        # con i valore delle europee ho lane_name   ---> lista
         f = mcs.parse_lane_node(lane_name, **kwargs)
 
         def exec_head(self, lane):
             distribution, info = self.propose(first_input)
+
+            # formato distribution :
+            #       indice      partito                     seggi
+            #       8           LEGA SALVINI PREMIER        30
+            #       12          PARTITO DEMOCRATICO         20
+            #...
+            #
+            # dagli indici possiamo capire che sono gli elementi di una lista
+            # piu generale in cui erano presenti tutti i partiti
+            # dai dati europei la somma dei seggi ai cinque partiti viene 76
+            # quindi è una distribuzione generale, non divisa per subdivisions
+
+            # formato info : dizionario
+            #                   - chiave : string_nome_partito
+            #                   - valore : dict{ 'Voti' : int_numero_voti_partito }
+
+            # con questa riga sembra restituire il formato di ritorno
+            # perchè è la prima parte dell'output, ovvero la distribuzione
+            # dei seggi in base alle circoscrizioni
             return f(self, lane_name, info, distribution=distribution)
         return exec_head
     @classmethod
@@ -413,17 +645,61 @@ class lanes(type):
         info: quali colonne mettere come informazioni
         info_key: se la chiave delle info è diversa dalla chiave della distribuzione
         """
+        # questa funzione viene chiamata tre volte apparentemente
+        # credo sia una per lane, dato che abbbimao tre lane con i dati europei
+        # (Nazione, Circoscrizione, Lista)
+        #
+        # alla prima chiamata ho :
+        #               - mcs = src.comb_Circoscrizione
+        #               - source = <function source_parse.<locals>.function_returned at instance_address>
+        #               - distribution = ['Lista', 'Seggi']
+        #               - info = ['Resto']
+        #               - kwargs = {}
+        #
+        # alla seconda chiamata ho :
+        #               - mcs = src.comb_Circoscrizione
+        #               - source = <function source_parse.<locals>.function_returned at instance_address>
+        #               - distribution = ['Candidato', 'Voti']
+        #               - info = ['Voti']
+        #               - kwargs = {}
+        #
+        # alla terza chiamata ho :
+        #               - mcs = src.comb_Nazione
+        #               - source = <function source_parse.<locals>.function_returned at instance_address>
+        #               - distribution = ['Partito', 'Seggi']
+        #               - info = ['Voti']
+        #               - kwargs = {}
+        #
+        # questi dati sono presi dai rispettivi file in ExampleDelivery/Classes/(Circoscrizione.yaml o Nazione.yaml)
+        #
+        # guardando il file Circoscrizione.yaml si trova che :
+        #       - la prima chiamata riguarda le liste e chiama la funzione 'commons.assign_local_seats'
+        #       - la seconda chiamata rigurda i candidati e non chiama funzione
+        #
+        # guardando il file Nazione.yaml si trova che :
+        #       - la terza chiamata chiama la funzione 'self.seggi_lista'
+        
 
+        # questo restituisce i dati delle distribuzioni sul dataframe passato
+        # in base ai campi di distribuzione richiesti
         def distribution_list(df):
             return df[distribution]
 
+        # qui decidiamo al funzione di distribuzione 
+        # e la chiave della distribuzione
+        # in base al parametro distribution
         if type(distribution) == list:
             distr_fun = distribution_list
             key_d = distribution[0]
         else:
+            # mai usata questa istruzione, quindi non so che fa
+            # dovrò analizzare la funzione interessata
             key_d, distr_fun = mcs.parse_propose_distribution_dict(**distribution)
             # distr_fun accetta un dataframe
 
+        # info_key viene utilizzato se la chiave è diversa dalla chiave della distribuzione
+        # se non viene assegnata allora gli assegnamo automaticamente la chiave
+        # della distribuzione 
         if info_key is None:
             info_key = key_d
 
@@ -437,8 +713,14 @@ class lanes(type):
             distribution: dataframe
             info_dict: Dict[str, Dict[str, obj]]
             """
+
+            # formato kind : string
             #TODO: aggiustare cosa prende la propose, idealmente tra i parametri  ... VEDI AUDIO TELEGRAM
+
+            # MA COSA VUOL DIRE VEDI AUDIO TELEGRAM
             locs = locals()
+
+             # data credo siano i voti ai candidati divisi per circoscrizioni
             data = source(locs, information=information, constraint=constraint, distribution=distribution)
 
             info_dict = {}
@@ -446,7 +728,30 @@ class lanes(type):
             for _, s in data.iterrows():
                 info_dict[s[info_key]] = {k: s[k] for k in info}
             distr_ret = distr_fun(data)
+
+             # qui vengono analizzati i file .yaml e vegnono restituiti le info
+            # richieste dalla sezione lanes_propose
+            # 
+            # info_dict : è un dizionario con 
+            #                       - chiave : i valori del primo attributo di lanes_propose
+            #                                   (quindi guardando Nazione.yaml sono liste)
+            #                       - valore : un dizionario formattato come la sezione info
+            #                                   sotto lanes_propose/'attributo'
+            #
+            # distr_fun : è la funzione usata per la distribuzione (CREDO, DA VERIFICARE)
+            #               potrebbe essere la funzione esplicitata nei file ExampleDelivery/Classes/.yaml
+            #               alla sezione lanes_propose/'attributo'/source/name
+            #
+            # distr_ret : è una lista (o array) con i campi formattati secondo quanto esplicitato
+            # alla sezione lanes_propose/'attributo'/distribution nei file ExampleDelivery/Classes/.yaml
+
             distr_ret = distr_ret[distr_ret.iloc[:, 1] > 0].copy()
+
+            # ritorna la distribuzione distr_ret prima dell'ultima istruzione
+            # ovvero una distribuzione con i campi formattati secondo quanto esplicitato
+            # alla sezione lanes_propose/'attributo'/distribution nei file ExampleDelivery/Classes/.yaml
+            #
+            # e ritorna anche info_dict, vedi sopra per formato di info_dict
             return distr_fun(data), info_dict
 
         return return_function_propose
