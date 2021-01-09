@@ -289,6 +289,7 @@ class totals(type):
         f = mcs.parse_total_support(True, **kwargs) # funzione che accetta locals, *args e **kwargs
 
         def totals(self, type, *sbarramenti, **kwargs):
+            #print(sbarramenti, kwargs)
             res = f({'self': self, 'commons':Commons, 'Commons':Commons}, *sbarramenti, **kwargs)
 
             # print(res)
@@ -296,6 +297,8 @@ class totals(type):
             columns = res.columns
 
             def apply_filter(row):
+
+                
                 polEnt = src.GlobalVars.Hub.get_instance("PolEnt", row[columns[0]])
                 return polEnt.filter(self, total=type, row=row, dataframe=res, sbarramenti=sbarramenti)
 

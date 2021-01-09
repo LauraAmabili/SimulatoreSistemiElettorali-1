@@ -29,7 +29,7 @@ class Partito(metaclass=comb_p, **conf):
 
         df = pd.concat(df_t, sort=True)
         ord = df[df['Circoscrizione'] == district.name].sort_values('Voti')
-        print(ord)
+        #print(ord)
         it = iter(ord['Candidato'])
         ret =  []
         for i in range(seats):
@@ -41,7 +41,7 @@ class Partito(metaclass=comb_p, **conf):
 
     def filter(self, district, *, total, row, dataframe, sbarramenti, **kwargs):
         if sbarramenti[0] == 'elette':
-            print("Filtering elette", total, row, dataframe, district)
+            #print("Filtering elette", total, row, dataframe, district)
             if district.type != 'Nazione':
                 return True
             tot_voti = dataframe['Voti'].sum()

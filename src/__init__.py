@@ -40,12 +40,12 @@ def run_simulation(path):
     # -------
     instances = next(os.walk(os.path.join(base_path, 'Instances')))
     for i in instances[2]:
-        print(i)
+        #print(i)
         cls = eval(i.split('.')[0])
         with open(os.path.join(base_path, 'Instances', i), 'r') as f:
             d = yaml.safe_load(f)
             for k, conf in d.items():
-                print(k)
+                #print(k)
                 cls(k, **conf)
 
     data = next(os.walk(os.path.join(base_path, 'Data')))
@@ -58,4 +58,11 @@ def run_simulation(path):
                 r = GlobalVars.Hub.get_instance(f, k)
                 getattr(r, f'give_{name}')(data.iloc[:, 1:])
 
-    return src.GlobalVars.Hub.run_exec()
+     # run_exec fa cominciare tutta la cascata di operazioni
+    final_result = src.GlobalVars.Hub.run_exec()
+
+    # questo risultato virtuale è stato creato solamente per non stampare a video
+    # tutte le informazioni tutte le volte, cambiare alla fine
+    final_virtual_result = "FINE ESECUZIONE"
+
+    return final_virtual_result

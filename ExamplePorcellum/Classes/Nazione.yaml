@@ -1,0 +1,184 @@
+metaclasses:
+  - lanes
+  - superdivision
+  - totals
+  - external
+
+
+external:
+  seggi:
+    # I seggi assegnati
+    init: True
+    type: int
+
+  circoscrizioni:
+    init: True
+
+
+# questa parte mi permette di chiamare da
+# Nazione delle funzioni di Circoscrizione
+# o da altre subdivisions a patto che siano
+# esplicitate in questo punto #
+subdivisions:
+  circoscrizioni:
+    type: Circoscrizione
+    functions:
+      - name: liste
+        source:
+          totals: liste
+      - name: coalizioni
+        source:
+          totals: coalizioni
+      - name: regioniListe
+        source:
+          totals: regioniListe
+
+lane:
+  lista:
+    node_type: head
+    order_number: 1
+    sub_level: Circoscrizione
+    info_name: Nazione
+    first_input: liste # Distribuzione : quanti seggi ad ogni lista
+                              # Informazioni:
+                              #   Partito:
+                              #     + VotiPartito
+    operations:
+      - collect_type: liste # Alla propose dovrà essere passato:
+                            #     + Dizionari info generali
+                            #     + Distribuzione ideale
+                            # E restituirà:
+                            #     + Distribuzione
+                            #     + Per ogni partito nelle informazioni ci sarà il resto della divisione effettuata
+        ideal_distribution: $
+        corrector: Commons.correct_porcellum
+
+
+
+lanes_propose:
+  liste:
+    source:
+      type: fun
+      name: self.distribuisci_seggi
+      rename:
+        Votes: Voti
+        Seats: Seggi
+    distribution:
+      #- Coalizione
+      - Eleggibile
+      - Seggi
+    info:
+      - Voti 
+
+
+
+totals:
+  liste:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_circoscrizioni_liste
+    columns:
+        - Partito
+        - Coalizione
+        - Voti
+    keys:
+      - Coalizione
+      - Partito
+    ops:
+      Voti: sum
+
+  coalizioni:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_circoscrizioni_coalizioni
+    columns:
+        - Coalizione
+        - Voti
+    keys:
+      - Coalizione
+    ops:
+      Voti: sum
+    
+  regioniListe:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_circoscrizioni_regioniListe
+    columns:
+        - Partito
+        - Regione
+        - Voti
+    keys:
+      - Partito
+      - Regione
+    ops:
+      Voti: sum
+
+
+totals_support:
+  distribuisci_seggi:
+    source:
+      totals: coalizioni
+      args:
+        - elette
+      rename:
+        Coalizione: Eleggibile
+        Voti: Votes
+    type: transform
+    ops:
+      - type: dataframe
+        source:
+          type: fun
+          name: Commons.distrib_porcellum
+          kwargs:
+            seats:
+              source:
+                type: fun
+                name: self.get_seggi
+            df_partiti_filtrato:
+              source:
+                totals: liste
+                args:
+                  - elette
+                rename:
+                  Partito: Eleggibile
+                  Voti: Votes
+            df_partiti_regioni:
+              source:
+                totals: regioniListe
+                args:
+                  - regione
+                rename:
+                  Partito: Eleggibile
+                  Voti: Votes
+#
+  #seggi_lista:
+  #  type: combine
+  #  function: Commons.distrib_porcellum
+  #  args:
+  #    - type: dataframe
+  #      source:
+  #        totals: coalizioni
+  #        args:
+  #          - elette
+  #        rename:
+  #          Voti: Votes
+  #    - type: dataframe # tutti i dataframe saranno combinati
+  #      source:
+  #        totals: liste
+  #        args:
+  #          - eletta
+  #        rename:
+  #          Lista: Party # hondt accetta Party, non Lista
+  #          Voti: Votes
+  #          
+  #  keys: # le colonne che uso per merge dataframe e selezione della serie
+  #    - Coalizione
+  #  rename:
+  #    Party: Lista
+  #    #Seats: Seggi
+  #    Remainder: RestoCircoLista
+  #    RemainderUsed: RestoCircoListaUsato
+#

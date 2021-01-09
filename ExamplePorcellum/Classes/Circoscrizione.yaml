@@ -1,0 +1,148 @@
+metaclasses:
+  - superdivision
+  - totals
+  - lanes
+  - external
+
+
+#circoscrizioni avranno parametro regioni   
+external:
+  regioni:
+    init: True
+  numero_seggi:
+    init: True
+
+# La Circoscrizione è suddivisa in
+# Regioni, le quali devono avere una funzione
+# che restituisce il numero di voti alle liste
+# 
+# la configurazione di questa funzione è descritta
+# nel file ExamplePorcellum/Classes/Regione.yaml 
+#  #
+subdivisions:
+  regioni:
+    # Le regioni, espone totals(liste)
+    type: Regione
+    functions:
+      - name: liste
+        source:
+          type: fun
+          name: self.get_voti_liste
+      - name: coalizioni
+        source:
+          type: fun
+          name: self.get_voti_coalizioni
+      - name: regioniListe
+        source:
+          type: fun
+          name: self.get_voti_regionali
+
+#totals si applica sulle liste elaborate in subdivision 
+
+# La lane di Circoscrizione è la tail della
+# sequenza di lanes, quindi è l'ultima e chiederà
+# i dati 
+# 
+# This behave as lane node except that instead of calling 
+# a sub level it uses the distribution it uses the information 
+# it has received to elect candidates, this will happen by 
+# taking the final dataframe obtained 
+# (which will have columns: ["PolEnt", "Seats to assign"]) 
+# and on the first column of each row calling the function 
+# provided by the elector metaclass #
+lane:
+  lista:
+    node_type: tail
+    info_name: Circoscrizione
+
+
+#{le lane si passano una distribuzione
+#in Nazione noi gli facciamo generare una distribuzione iniziale che andremo a correggere con correct porcellum
+#la distribuzione corretta sarà passata alla lane sottostante. Se la lane sottostant eè un nodo 
+#allora correggerà la distribuzione a sua volta, se è la tail ( la fine) distribuirà i seggi in base alla distribuzione data}
+
+
+# In questa parte dello yaml
+# definisco quali funzioni devono essere
+# applicate ai dataframe per la
+# manipolazione dei dati 
+#  #
+totals: # In questa sezione definisco le funzioni 
+        # che aggregano e manipolano i dataframe
+        # rappresentanti i voti espressi
+  liste:
+    type: aggregate # Aggregate prende un dataframe che potrebbe contenere dati duplicati e aggrega 
+                    # i dati aventi la
+                    # stessa chiave
+    source: # la sorgente da cui ricavare i dati su cui operare
+      type: fun # prende i dati da una funzione
+      name: self.subs_regioni_liste # la funzione da chiamare
+      columns:
+        - Lista -> Partito
+        - Coalizione
+        - Voti
+    keys: # Le chiavi su cui aggregare
+      - Partito
+      - Coalizione
+    ops: # Le operazioni da effettuare
+      Voti: sum # Somma i valori della colonna Voti
+
+  coalizioni:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_regioni_coalizioni
+      columns:
+        - Coalizione
+        - Voti
+    keys:
+      - Coalizione
+    ops:
+      Voti: sum
+    
+  regioniListe:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_regioni_regioniListe
+      columns:
+      - Lista -> Partito
+      - Regione
+      - Voti
+    keys:
+      - Partito
+      - Regione
+    ops:
+      Voti: sum
+
+  
+  #Ho tolto candidato perchè non ne abbiamo bisogno
+  
+# ATTENZIONE : c'è da cambiare commons.assign_local_seats 
+# perchè è collocata in europee, devo analizzarla e modificarla
+# in base al porcellum #
+lanes_propose:
+  liste:
+    # Riceve tra le informazioni quanti voti ogni partito ha ricevuto in generale e
+    # la distribuzione nazionale dei seggi
+    # Restituisce un dataframe con i seggi interi e i resti nelle informazioni
+    source:               # Questa funzione restituisce un dataframe da cui estraggo
+                          # informazioni e la distribuzione
+      type: fun                         # Questo source chiama una funzione
+      name: commons.divisione_circoscrizionale_seggi  # la funzione da chiamare, poiché è in propose riceve tramite kwarg
+                                        # la distribuzione totale e le informazioni, le devo passare solo i voti
+                                        # ricevuti nel sottolivello
+      kwargs:
+        district_votes:
+          source:
+            totals: liste
+        seggi:
+          source:
+            type: fun
+            name: self.get_numero_seggi
+    distribution:
+      - Partito  # La colonna chiave
+      - Seggi   # la colonna che indica quanti seggi
+    info:
+      - Resto
+      - Voti

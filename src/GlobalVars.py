@@ -28,29 +28,47 @@ class ActHub:
         self.assigned_seats = {}
 
     def run_exec(self):
+
+        # ordina le lanes secondo 'order_number'
+        # quindi order_number è la priorità, viene
+        # eseguita prima la lane con order_numer piu basso
         orders = sorted(self.lanes.keys())
         for i in orders:
+
             ret = []
+            exec_return = []
+
             for l_n, h_c in self.lanes[i]:
+
                 instances = self.get_instances(h_c)
                 instances = [self.get_instance(h_c, n_i) for n_i in instances]
+
                 ret.extend([instruction for inst in instances for instruction in inst.exec_lane(l_n)])
 
-            prop_nomi = set()
-            for district, name_lista, elector, seats in ret:
-                self.electors.append((district, name_lista, elector, seats))
-                p = self.get_instance("PolEnt", elector)
-                for name in p.elect(name_lista, district, seats):
-                    prop_nomi.add(name)
-            iter_nomi = ExtendableIterator(prop_nomi)
+            polEnt_list = self.subclasses.get('PolEnt')
+            if 'Candidato' in polEnt_list :
 
-            for i in iter_nomi:
-                c = self.get_instance("PolEnt", i)
-                info, next = c.pick()
-                for nome_next in next:
-                    iter_nomi.add_el(nome_next)
-                self.elected[i] = info
-        return self.electors, self.elected
+                prop_nomi = set()
+                for district, name_lista, elector, seats in ret:
+                    self.electors.append((district, name_lista, elector, seats))
+                    p = self.get_instance("PolEnt", elector)
+                    for name in p.elect(name_lista, district, seats):
+                        prop_nomi.add(name)
+                iter_nomi = ExtendableIterator(prop_nomi)
+
+                
+                for i in iter_nomi:
+
+                    c = self.get_instance("PolEnt", i)
+                    info, next = c.pick()
+                    for nome_next in next:
+                        iter_nomi.add_el(nome_next)
+                    self.elected[i] = info
+                exec_return = [self.electors, self.elected]
+            else: 
+                exec_return = ret
+                
+        return exec_return
 
     def get_elected(self, lane=None, polEnt=None):
         """
@@ -83,9 +101,12 @@ class ActHub:
 
     def add_political_sub(self, sub, sup, typ):
         o_sup = self.pol.get(sup, {})
+
         o_sup_class = o_sup.get(typ, set())
         o_sup_class.add(sub)
+
         o_sup[typ] = o_sup_class
+
         self.pol[sup] = o_sup
 
     def get_path(self, sup_t, sub_t):
@@ -99,7 +120,7 @@ class ActHub:
         return []
 
     def get_subdivisions(self, sup, sub_class, instance=False):
-        print("Get sub")
+        #print("Get sub")
         typ = None
         inst = sup
         if type(sup) == tuple:
@@ -164,7 +185,7 @@ class ActHub:
         self.subclasses[superclass] = ex
 
     def get_instances(self, classe, strict=False):
-        print("Get instances: ", classe, strict)
+        #print("Get instances: ", classe, strict)
         """
         Ricava tutte le istanze di tutte le sottoclassi di classe, se necessario 
         """
@@ -205,13 +226,15 @@ class ActHub:
         self.instances_dict[class_name] = instances
 
     def get_instance(self, class_name, inst_name):
-        print("Getting instance", class_name, inst_name)
+
+        #print("Getting instance", class_name, inst_name)
         subs = self.subclasses.get(class_name, [])
 
         for i in subs:
             if inst_name in self.get_instances(i):
                 return self.instances_dict[i][inst_name]
 
+        
         return self.instances_dict[class_name][inst_name]
 
     def add_subdiv(self, sup_type, sub_type, var_name):
@@ -224,8 +247,15 @@ class ActHub:
         self.subs_relations[sup_type] = sup_dict
 
     def register_lane(self, name, head_class, order):
+        # self.lanes è il dizionario che contiene tutte le lane create
+        # prende la lane con order passato,
+        # se non c'è di default restituisce lista vuota []
         exist = self.lanes.get(order, [])
+
+        # appende il nome della lane e il nome della classe della lane
         exist.append((name, head_class))
+
+        # aggiunge i valori al dizionario delle lane
         self.lanes[order] = exist
 
 

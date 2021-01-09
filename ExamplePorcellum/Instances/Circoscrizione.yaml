@@ -1,0 +1,155 @@
+'LOMBARDIA 1':
+  regioni:
+  - LOMBARDIA 1
+  numero_seggi:
+  - 40
+
+'LOMBARDIA 2':
+  regioni:
+  - LOMBARDIA 2
+  numero_seggi:
+  - 45
+
+'LOMBARDIA 3':
+  regioni:
+  - LOMBARDIA 3
+  numero_seggi:
+  - 16
+
+'PIEMONTE 1':
+  regioni:
+  - PIEMONTE 1
+  numero_seggi:
+  - 23
+
+'PIEMONTE 2':
+  regioni:
+  - PIEMONTE 2
+  numero_seggi:
+  - 22
+
+'VENETO 1':
+  regioni:
+  - VENETO 1
+  numero_seggi:
+  - 31
+
+'VENETO 2':
+  regioni:
+  - VENETO 2
+  numero_seggi:
+  - 20
+
+'TRENTINO-ALTO ADIGE':
+  regioni:
+  - TRENTINO-ALTO ADIGE
+  numero_seggi:
+  - 12
+
+'FRIULI-VENEZIA GIULIA':
+  regioni:
+  - FRIULI-VENEZIA GIULIA
+  numero_seggi:
+  - 13
+
+'EMILIA ROMAGNA':
+  regioni:
+  - EMILIA ROMAGNA
+  numero_seggi:
+  - 45
+
+'TOSCANA':
+  regioni:
+  - TOSCANA
+  numero_seggi:
+  - 38
+
+'UMBRIA':
+  regioni:
+  - UMBRIA
+  numero_seggi:
+  - 9
+
+'MARCHE':
+  regioni:
+  - MARCHE
+  numero_seggi:
+  - 16
+
+'LAZIO 1':
+  regioni:
+  - LAZIO 1
+  numero_seggi:
+  - 42
+
+'LAZIO 2':
+  regioni:
+  - LAZIO 2
+  numero_seggi:
+  - 16
+
+'CAMPANIA 1':
+  regioni:
+  - CAMPANIA 1
+  numero_seggi:
+  - 32
+
+'CAMPANIA 2':
+  regioni:
+  - CAMPANIA 2
+  numero_seggi:
+  - 28
+
+'MOLISE':
+  regioni:
+  - MOLISE
+  numero_seggi:
+  - 2
+
+'ABRUZZO':
+  regioni:
+  - ABRUZZO
+  numero_seggi:
+  - 14
+
+'PUGLIA':
+  regioni:
+  - PUGLIA
+  numero_seggi:
+  - 42
+
+'BASILICATA':
+  regioni:
+  - BASILICATA
+  numero_seggi:
+  - 6
+
+'CALABRIA':
+  regioni:
+  - CALABRIA
+  numero_seggi:
+  - 20
+
+'SICILIA 1':
+  regioni:
+  - SICILIA 1
+  numero_seggi:
+  - 25
+
+'SICILIA 2':
+  regioni:
+  - SICILIA 2
+  numero_seggi:
+  - 27
+
+'SARDEGNA':
+  regioni:
+  - SARDEGNA
+  numero_seggi:
+  - 17
+
+'LIGURIA':
+  regioni:
+  - LIGURIA
+  numero_seggi:
+  - 16

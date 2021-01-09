@@ -1,0 +1,20 @@
+metaclasses:
+  - totals
+  - external
+
+external:
+  voti_regionali: # espone i voti per le liste
+    columns:
+      - REGIONE -> Regione
+      - COALIZIONE -> Coalizione
+      - LISTA -> Lista
+      - VOTI_LISTA -> Voti
+  voti_liste: # espone i voti per le liste
+    columns:
+      - COALIZIONE -> Coalizione
+      - LISTA -> Lista
+      - VOTI_LISTA -> Voti
+  voti_coalizioni:
+    columns:
+      - COALIZIONE -> Coalizione
+      - VOTI_LISTA -> Voti

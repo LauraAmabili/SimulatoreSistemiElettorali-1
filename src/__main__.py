@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(
                 'electoral process')
 parser.add_argument('path', help='the path to the directory containing the configuration files', nargs='*')
 
-print("Hey")
+#print("Hey")
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -39,17 +39,17 @@ if __name__ == '__main__':
         res_el, res_cand = src.run_simulation(i)
     sys.stdout = save_stdout
     f.close()
-    print("""
+    #print("""
 
         ---------------------------
 
         """)
-    print(res_el)
-    print("""
+    #print(res_el)
+    #("""
     
     ---------------------------
     
     """)
-    print(res_cand)
+    #print(res_cand)
 
 
