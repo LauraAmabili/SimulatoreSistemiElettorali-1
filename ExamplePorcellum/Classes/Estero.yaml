@@ -1,0 +1,90 @@
+metaclasses:
+  - lanes
+  - superdivision
+  - totals
+  - external
+
+
+external:
+  seggi:
+    init: True
+    type: int
+
+  circoscrizioni_estere:
+    init: True
+
+
+subdivisions:
+  circoscrizioni_estere:
+    type: Circoscrizione_Estera
+    functions:
+      - name: liste
+        source:
+          totals: liste
+
+
+# LANES SECTION <------------------------------------- #
+
+lane:
+
+  estero:
+    node_type: head
+    order_number: 1
+    sub_level: Circoscrizione_Estera
+    info_name: Estero
+    first_input: liste
+    operations:
+      - collect_type: liste
+        ideal_distribution: $
+        corrector: Commons.correct_porcellum_estero
+
+
+lanes_propose:
+
+  liste:
+    source:
+      type: fun
+      name: self.estero
+    distribution:
+      - Lista
+      - Seggi
+    info:
+      - Voti
+
+
+# TOTALS SECTION <--------------------------------- #
+
+totals:
+
+  liste:
+    type: aggregate
+    source:
+      type: fun
+      name: self.subs_circoscrizioni_estere_liste
+    columns:
+        - Lista
+        - Voti
+    keys:
+      - Lista
+    ops:
+      Voti: sum
+
+
+totals_support:
+
+  estero:
+    source:
+      totals: liste
+      args:
+        - estero
+    type: transform
+    ops:
+      - type: dataframe
+        source:
+          type: fun
+          name: Commons.distrib_porcellum_estero
+          kwargs:
+            seats:
+              source:
+                type: fun
+                name: self.get_seggi

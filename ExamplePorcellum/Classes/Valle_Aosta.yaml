@@ -1,0 +1,71 @@
+metaclasses:
+  - totals
+  - lanes
+  - external
+
+external:
+  voti_valle_d_aosta:
+    columns:
+      - LISTA -> Partito
+      - VOTI_LISTA -> Voti
+    
+
+
+lane:
+  valle_d_aosta:
+    node_type: only
+    order_number: 1
+    first_input: None
+    distribution: uninom
+    info_name: Valle D'Aosta
+
+
+
+lanes_propose:
+
+  uninom:
+    source:
+      type: fun
+      name: self.valle_d_aosta
+    distribution:
+      - Partito
+      - Seggi
+    info:
+      - Numero
+
+
+totals:
+  liste:
+    type: aggregate
+    source:
+      type: att
+      name: self.voti_valle_d_aosta
+    rename:
+      LISTA: Partito
+      VOTI_LISTA: Voti
+    columns:
+        - LISTA
+        - VOTI_LISTA
+    keys:
+      - LISTA
+    ops:
+      VOTI_LISTA: sum
+
+
+totals_support:
+  
+  valle_d_aosta:
+    source:
+      totals: liste
+      #args:
+      #  - elette
+      #rename:
+      #  Coalizione: Eleggibile
+      #  Voti: Votes
+    type: transform
+    ops:
+      - type: dataframe
+        source:
+          type: fun
+          name: Commons.distrib_porcellum_aosta
+    

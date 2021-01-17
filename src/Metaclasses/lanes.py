@@ -584,7 +584,7 @@ class lanes(type):
         def exec_only(self, lane):
             distrib, info = self.propose(distr_name)
 
-            return f(self, lane_name, *info, distribution=distrib)
+            return f(self, lane_name, info, distribution=distrib)
 
         return exec_only
 

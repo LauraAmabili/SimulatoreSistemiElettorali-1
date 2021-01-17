@@ -88,7 +88,7 @@ class totals(type):
             return source(locs, data=df)
 
         return whole_df_transform
-
+        
     @classmethod
     def parse_transform_op_col(mcs, *, source, replace_name=None, column, column_type=None, **kwargs):
         """

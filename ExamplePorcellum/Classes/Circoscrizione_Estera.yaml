@@ -1,0 +1,87 @@
+metaclasses:
+  - totals
+  - lanes
+  - external
+
+
+external:
+
+  voti_estero:
+    columns:
+      - Lista
+      - Voti
+  
+  nome:
+    init: True
+  
+  numero_seggi:
+    init: True
+
+
+# LANES SECTION <------------------------------------------- #
+
+lane:
+
+  estero:
+    node_type: tail
+    info_name: Circoscrizione_Estera
+
+
+lanes_propose:
+
+  liste:
+    source:
+      type: fun
+      name: self.estero
+      rename:
+        Votes: Voti
+        Seats: Seggi
+    distribution:
+      - Lista
+      - Seggi
+    info:
+      - Voti
+      - Remainder
+
+
+# TOTALS SECTION <------------------------------------------- #
+
+totals:
+
+  liste:
+    type: transform
+    source:
+      type: att
+      name: self.voti_estero
+    ops:
+      - type: dataframe
+        source:
+          type: fun
+          name: commons.fill_column
+          kwargs:
+            column: 'Circoscrizione'
+            column_val:
+              source:
+                type: att
+                name: self.name
+
+
+totals_support:
+
+  estero:
+    type: transform
+    source:
+      type: att
+      name: self.voti_estero
+      rename:
+        Voti: Votes
+    ops:
+      - type: dataframe
+        source:
+          type: fun
+          name: commons.hondt
+          kwargs:
+            seats:
+              source:
+                type: fun
+                name: self.get_numero_seggi

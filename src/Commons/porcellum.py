@@ -4,94 +4,6 @@ import src.GlobalVars as gv
 pd.options.mode.chained_assignment = None
 
 
-def correct_porcellum(distretto, distribuzione_ideale, distribuzione_raccolta,
-                    info_locali, *info_comuni):
-    
-    #print("---> CORRECT PORCELLUM <---")
-
-    # distribuzione_raccolta è un dizionario che contiene un distribuzione dei
-    # seggi suddivisa però per circoscrizione
-    #
-    # prende la distribuzione passata
-    # con i dati europei la prima distribuzione passata sarà quella generale
-    # in cui ogni partito avrà il numero totale di seggi che gli vengono assegnati
-    #
-    #                        Partito     Seggi
-    #       8   LEGA SALVINI PREMIER     30
-    #       12   PARTITO DEMOCRATICO     20
-    #       6      FRATELLI D'ITALIA      5
-    #       4           FORZA ITALIA      7
-    #       9     MOVIMENTO 5 STELLE     14 
-    #
-    # #
-    ideal = distribuzione_ideale
-
-    actual_distr = {}
-    resti = {}
-    
-    for k, v in distribuzione_raccolta.items() :
-
-        for _, r in v.iterrows():
-
-            party = r['Partito'] # prendo la lista di questa riga
-            o_segg = actual_distr.get(party, 0) # prendo il numero di seggi di questo partito
-                                                # se non è presente di default è 0
-
-            actual_distr[party] = r['Seggi'] + o_segg # aggiungo il numero di seggi al partito
-
-            o_resti = resti.get(party, {}) # prendo il numero di resti del partito
-                                           # se non è presente di defaul ho dizionario vuoto
-
-            o_resti[k] = info_locali[k][party]['Resto'] # prendo il resto del partito in questa circoscrizione
-            resti[party] = o_resti # setto in un dizionario locale il resto
-    
-    # copia distribuzione_raccolta in df_r
-    df_r = {k: v.set_index('Partito') for k, v in distribuzione_raccolta.items()}
-
-    for _, r in ideal.iterrows():
-
-        p = r['Eleggibile']
-        s = r['Seggi']
-
-        # conta la differenza di seggi tra la distribuzione ideale
-        # (ovvero quella con il numero di seggi totali)
-        # rispetto alla distribuzione attuale
-        # (ovvero quella con il numero di seggi divisi per circoscrizione)
-        diff = int(s - actual_distr.get(p,0))
-
-        # se non ho differenza continua
-        if diff == 0:
-            continue
-
-        # ora ordina i partiti per il valore del resto con il piu alto per primo
-        #
-        # ok ruffati, ma come lo sai in che circoscrizione lo devi aggiungere ?
-        # te lo dicono per messaggio segreto ? mazzette ?
-        # so in che circoscrizioni devo aggiungere
-        #
-        # in pratica questa è una lista di circoscrizioni con rispettivi resti in cui
-        # si dovranno aggiungere i seggi
-        # in qualche modo questa funzione lo fa
-        #
-        # credo che prenda l'intera lista e poi tenga solamente le prime n (n = diff) circoscrizoni
-        # con resto piu alto
-        resti_p = sorted(list(resti[p].items()), key=lambda x: x[1], reverse=True)[:diff]
-        
-        # ora assegno i seggi mancanti ai pariti
-        for distr, _ in resti_p:
-            if p not in df_r[distr].index:
-                df_r[distr].loc[p, 'Seggi'] = 0
-            df_r[distr].loc[p,'Seggi'] += 1
-
-    ret = {k: v.reset_index() for k, v in df_r.items()}, {},{}
-
-    #print("RET")
-    #print(ret)
-    
-    # restituisco la nuova distribuzione
-    return ret
-
-
 def distrib_porcellum(*a, data, seats, df_partiti_filtrato, df_partiti_regioni, **kwargs):
     print("\n---> TROVO LA DISTRIBUZIONE DEI SEGGI CON IL PORCELLUM <---\n")
 
@@ -205,6 +117,33 @@ def distrib_porcellum(*a, data, seats, df_partiti_filtrato, df_partiti_regioni, 
     return df_final_distribution
 
 
+def distrib_porcellum_aosta(*a, data, **kwargs):
+    print("\n---> ELEGGO IL SEGGIO DELLA VALLE D'AOSTA <---\n")
+
+    df_seggi_aosta = data.copy()
+
+    df_seggi_aosta.sort_values('Voti', ascending=False, inplace=True)
+
+    df_seggi_aosta['Seggi'] = 0
+
+    df_seggi_aosta.iloc[0, df_seggi_aosta.columns.get_loc('Seggi')] = 1
+    df_seggi_aosta.iloc[1:, df_seggi_aosta.columns.get_loc('Seggi')] = 0
+
+    df_seggi_aosta = df_seggi_aosta.rename(columns={'Voti': 'Numero'})
+
+    print(df_seggi_aosta)
+
+    return df_seggi_aosta
+
+
+def distrib_porcellum_estero(*a, seats, data, **kwargs):
+
+    df_estero = data.copy()
+    df_estero['Seggi'] = 0
+
+    return df_estero
+
+
 def dividi_per_partiti(df_eleggibili, df_partiti, df_coalizioni):
 
     print("\n---> SUDDIVIDO I SEGGI DELLE COALIZIONI TRA I PARTITI <---\n")
@@ -273,6 +212,191 @@ def divisione_circoscrizionale_seggi(*, information, distribution, district_vote
     #print("ESEGUO divisione_circoscrizionale_seggi")
 
     info = information[1]
+    numero_seggi_circoscrizione = seggi[0]
+
+    voti_circoscrizione = district_votes.set_index('Partito')['Voti']
+
+    risultato = []
+    
+    for index, row in distribution.iterrows():
+
+        partito = row['Eleggibile']
+        numero_seggi = row['Seggi']
+        voti_partito = voti_circoscrizione.get(partito, 0)
+        
+        voti_nazionali_partito = info[partito]['Voti']
+        
+        if numero_seggi == 0:
+            continue
+
+        q = voti_nazionali_partito / numero_seggi
+
+        seggi_assegnati, resto = divmod(voti_partito, q)
+        seggi_assegnati = int(voti_partito / q)
+        resto = (voti_partito / q) - seggi_assegnati
+
+        risultato.append(pd.Series({'Partito': partito, 'Seggi': seggi_assegnati, 'Resto': resto, 'Voti': voti_partito}))
+
+
+    #ret = pd.concat(risultato, axis=1).T
+    ret = pd.DataFrame(risultato)
+
+    ret['Seggi'] = ret['Seggi'].astype("int")
+
+    #print(ret)
+
+    seggi_rimanenti = seggi - ret['Seggi'].sum()
+
+    assegna_a_tutti, resto = divmod(seggi_rimanenti, len(ret.index))
+
+    ret['Seggi'] += assegna_a_tutti
+
+    ret.sort_values('Resto', ascending=False, inplace=True)
+
+    resto = int(resto)
+    ret.loc[:resto, 'Seggi'] += 1
+
+    #print(ret)
+
+    return ret
+
+
+def correct_porcellum(distretto, distribuzione_ideale, distribuzione_raccolta,
+                    info_locali, *info_comuni):
+    
+    #print("---> CORRECT PORCELLUM <---")
+
+    # distribuzione_raccolta è un dizionario che contiene un distribuzione dei
+    # seggi suddivisa però per circoscrizione
+    #
+    # prende la distribuzione passata
+    # con i dati europei la prima distribuzione passata sarà quella generale
+    # in cui ogni partito avrà il numero totale di seggi che gli vengono assegnati
+    #
+    #                        Partito     Seggi
+    #       8   LEGA SALVINI PREMIER     30
+    #       12   PARTITO DEMOCRATICO     20
+    #       6      FRATELLI D'ITALIA      5
+    #       4           FORZA ITALIA      7
+    #       9     MOVIMENTO 5 STELLE     14 
+    #
+    # #
+    ideal = distribuzione_ideale
+
+    actual_distr = {}
+    resti = {}
+    
+    for k, v in distribuzione_raccolta.items() :
+
+        for _, r in v.iterrows():
+
+            party = r['Partito'] # prendo la lista di questa riga
+            o_segg = actual_distr.get(party, 0) # prendo il numero di seggi di questo partito
+                                                # se non è presente di default è 0
+
+            actual_distr[party] = r['Seggi'] + o_segg # aggiungo il numero di seggi al partito
+
+            o_resti = resti.get(party, {}) # prendo il numero di resti del partito
+                                           # se non è presente di defaul ho dizionario vuoto
+
+            o_resti[k] = info_locali[k][party]['Resto'] # prendo il resto del partito in questa circoscrizione
+            resti[party] = o_resti # setto in un dizionario locale il resto
+    
+    # copia distribuzione_raccolta in df_r
+    df_r = {k: v.set_index('Partito') for k, v in distribuzione_raccolta.items()}
+
+    for _, r in ideal.iterrows():
+
+        p = r['Eleggibile']
+        s = r['Seggi']
+
+        # conta la differenza di seggi tra la distribuzione ideale
+        # (ovvero quella con il numero di seggi totali)
+        # rispetto alla distribuzione attuale
+        # (ovvero quella con il numero di seggi divisi per circoscrizione)
+        diff = int(s - actual_distr.get(p,0))
+
+        # se non ho differenza continua
+        if diff == 0:
+            continue
+
+        # ora ordina i partiti per il valore del resto con il piu alto per primo
+        #
+        # ok ruffati, ma come lo sai in che circoscrizione lo devi aggiungere ?
+        # te lo dicono per messaggio segreto ? mazzette ?
+        # so in che circoscrizioni devo aggiungere
+        #
+        # in pratica questa è una lista di circoscrizioni con rispettivi resti in cui
+        # si dovranno aggiungere i seggi
+        # in qualche modo questa funzione lo fa
+        #
+        # credo che prenda l'intera lista e poi tenga solamente le prime n (n = diff) circoscrizoni
+        # con resto piu alto
+        resti_p = sorted(list(resti[p].items()), key=lambda x: x[1], reverse=True)[:diff]
+        
+        # ora assegno i seggi mancanti ai pariti
+        for distr, _ in resti_p:
+            if p not in df_r[distr].index:
+                df_r[distr].loc[p, 'Seggi'] = 0
+            df_r[distr].loc[p,'Seggi'] += 1
+
+    ret = {k: v.reset_index() for k, v in df_r.items()}, {},{}
+
+    #print("RET")
+    #print(ret)
+    
+    # restituisco la nuova distribuzione
+    return ret
+
+
+def correct_porcellum_estero(distretto, distribuzione_ideale, distribuzione_raccolta,
+                    info_locali, *info_comuni):
+
+    lista_partiti = distribuzione_ideale['Lista'].unique()
+
+    ideale = pd.DataFrame(lista_partiti, columns =['Lista'])
+    ideale['Seggi'] = 0
+    ideale['Voti'] = 0
+
+    # con il primo for scorro le circoscrizioni
+    # con il secondo for scorro le righe della distribuzine dentro la circoscirizione
+    for key, value in distribuzione_raccolta.items() :
+        for index, row in value.iterrows() :
+
+            lista = row['Lista']
+            
+            numero_seggi = row['Seggi']
+            seggi_avuti = int(ideale[ideale['Lista'] == lista]['Seggi'])
+            new_seggi = seggi_avuti + numero_seggi
+
+            i = ideale.index[ideale['Lista'] == lista].tolist()
+
+            ideale['Seggi'][i] = new_seggi
+    
+
+    #dizionario_voti = info_comuni[0]
+    #for key, value in dizionario_voti.items():
+    #   
+    #    lista = key
+    #    voti = value.get('Voti', 0)
+    #
+    #    i = ideale.index[ideale['Lista'] == lista].tolist()
+    #    ideale['Voti'][i] = voti
+    
+    ideale.sort_values('Seggi', ascending=False, inplace=True)
+    
+    print("\n---> DISTRIBUZIONE DEI SEGGI ESTERI <---\n")
+    print(ideale)
+
+    ret = distribuzione_raccolta, {}, {}
+    return ret
+
+
+def divisione_circoscrizionale_seggi(*, information, distribution, district_votes, seggi, **kwargs):
+
+    #print("ESEGUO divisione_circoscrizionale_seggi")
+
+    info = information[1]
 
     voti_circoscrizione = district_votes.set_index('Partito')['Voti']
 
@@ -302,8 +426,6 @@ def divisione_circoscrizionale_seggi(*, information, distribution, district_vote
 
 
 def printing_visuals(lista) :
-
-
 
     lista_circoscrizioni = [i[0] for i in lista]
     general_dict = dict.fromkeys(lista_circoscrizioni, {}) 
