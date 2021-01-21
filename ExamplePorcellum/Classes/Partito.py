@@ -2,14 +2,6 @@ import pandas as pd
 import numpy as np
 import yaml
 
-conf = """
-metaclasses:
-  - logger # aggiunge automaticamente una funzione log
-  - subclass
-
-subclass:
-    - PolEnt
-"""
 
 conf = """
 metaclasses:
@@ -28,10 +20,6 @@ party:
         - coalition
 
 """
-
-
-
-
 
 conf = yaml.safe_load(conf)
 
@@ -69,11 +57,25 @@ class Partito(metaclass=comb_p, **conf):
                 self.percRegione = 0.0
             
             return False
-                    
-                
 
+        # questo è il filtro per lo sbarramento dei partiti che si sono 
+        # presentati nelle circoscrizioni estere, bisogna controllare solamente
+        # se passano il 4% dei voti esteri #     
+        if sbarramenti[0] == 'elette' and district.type == 'Estero':
+            tot_voti = dataframe['Voti'].sum()
+
+            solo_righe_partito = dataframe[dataframe['Lista'] == row['Lista']]
+            tot_voti_partito = solo_righe_partito['Voti'].sum()
+
+            return tot_voti_partito > tot_voti * 0.04
             
-
+        
+        # filtro che implementa lo sbarramenti a livello nazionale per i partiti,
+        # controllando se fanno parte di una coalizione che ha superato la rispettiva
+        # soglia di sbarramento.
+        # in caso non faccia parte di una coalizione o nel caso la coalizione non passi
+        # il rispettivo sbarramento allora devo controllare se il partito passa lo sbarramento
+        # del 4% dei voti totali nazionali #
         if sbarramenti[0] == 'elette' and district.type == 'Nazione':
 
             #print("eseguo filter di partito in ", district.type)

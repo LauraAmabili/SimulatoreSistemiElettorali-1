@@ -5,15 +5,12 @@ metaclasses:
 
 
 external:
-
   voti_estero:
     columns:
       - Lista
       - Voti
-  
   nome:
     init: True
-  
   numero_seggi:
     init: True
 

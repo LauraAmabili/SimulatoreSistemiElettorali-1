@@ -9,7 +9,6 @@ external:
   seggi:
     init: True
     type: int
-
   circoscrizioni_estere:
     init: True
 

@@ -50,7 +50,7 @@
   regioni:
   - FRIULI-VENEZIA GIULIA
   numero_seggi:
-  - 13
+  - 12
 
 'EMILIA ROMAGNA':
   regioni:
@@ -146,7 +146,7 @@
   regioni:
   - SARDEGNA
   numero_seggi:
-  - 17
+  - 18
 
 'LIGURIA':
   regioni:

@@ -3,13 +3,13 @@ metaclasses:
   - external
 
 external:
-  voti_regionali: # espone i voti per le liste
+  voti_regionali:
     columns:
       - REGIONE -> Regione
       - COALIZIONE -> Coalizione
       - LISTA -> Lista
       - VOTI_LISTA -> Voti
-  voti_liste: # espone i voti per le liste
+  voti_liste:
     columns:
       - COALIZIONE -> Coalizione
       - LISTA -> Lista

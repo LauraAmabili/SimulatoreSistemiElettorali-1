@@ -10,15 +10,10 @@ external:
     # I seggi assegnati
     init: True
     type: int
-
   circoscrizioni:
     init: True
 
 
-# questa parte mi permette di chiamare da
-# Nazione delle funzioni di Circoscrizione
-# o da altre subdivisions a patto che siano
-# esplicitate in questo punto #
 subdivisions:
   circoscrizioni:
     type: Circoscrizione
@@ -33,29 +28,28 @@ subdivisions:
         source:
           totals: regioniListe
 
+
+# LANES SECTION <------------------------------------- #
+
 lane:
   lista:
     node_type: head
     order_number: 1
     sub_level: Circoscrizione
     info_name: Nazione
-    first_input: liste # Distribuzione : quanti seggi ad ogni lista
-                              # Informazioni:
-                              #   Partito:
-                              #     + VotiPartito
+    first_input: liste 
     operations:
-      - collect_type: liste # Alla propose dovrà essere passato:
-                            #     + Dizionari info generali
-                            #     + Distribuzione ideale
-                            # E restituirà:
-                            #     + Distribuzione
-                            #     + Per ogni partito nelle informazioni ci sarà il resto della divisione effettuata
+      - collect_type: liste
         ideal_distribution: $
         corrector: Commons.correct_porcellum
+      - collect_type: partiti
+        ideal_distribution: $
+        corrector: Commons.correct_porcellum_partiti
 
 
 
 lanes_propose:
+
   liste:
     source:
       type: fun
@@ -64,15 +58,32 @@ lanes_propose:
         Votes: Voti
         Seats: Seggi
     distribution:
-      #- Coalizione
-      - Eleggibile
+      - Partito
       - Seggi
+      - Coalizione
     info:
-      - Voti 
+      - Voti
+  
+  partiti:
+    source:
+      type: fun
+      name: self.distribuisci_seggi
+      #name: self.distribuisci_seggi_partiti
+      rename:
+        Votes: Voti
+        Seats: Seggi
+    distribution:
+      - Partito
+      - Seggi
+      - Coalizione
+    info:
+      - Voti
 
 
+# TOTALS SECTION <--------------------------------- #
 
 totals:
+
   liste:
     type: aggregate
     source:
@@ -118,6 +129,7 @@ totals:
 
 
 totals_support:
+
   distribuisci_seggi:
     source:
       totals: coalizioni
@@ -153,32 +165,43 @@ totals_support:
                 rename:
                   Partito: Eleggibile
                   Voti: Votes
-#
-  #seggi_lista:
-  #  type: combine
-  #  function: Commons.distrib_porcellum
-  #  args:
+            dividi_partiti:
+              False
+  
+  #distribuisci_seggi_partiti:
+  #  source:
+  #    totals: coalizioni
+  #    args:
+  #      - elette
+  #    rename:
+  #      Coalizione: Eleggibile
+  #      Voti: Votes
+  #  type: transform
+  #  ops:
   #    - type: dataframe
   #      source:
-  #        totals: coalizioni
-  #        args:
-  #          - elette
-  #        rename:
-  #          Voti: Votes
-  #    - type: dataframe # tutti i dataframe saranno combinati
-  #      source:
-  #        totals: liste
-  #        args:
-  #          - eletta
-  #        rename:
-  #          Lista: Party # hondt accetta Party, non Lista
-  #          Voti: Votes
-  #          
-  #  keys: # le colonne che uso per merge dataframe e selezione della serie
-  #    - Coalizione
-  #  rename:
-  #    Party: Lista
-  #    #Seats: Seggi
-  #    Remainder: RestoCircoLista
-  #    RemainderUsed: RestoCircoListaUsato
-#
+  #        type: fun
+  #        name: Commons.distrib_porcellum
+  #        kwargs:
+  #          seats:
+  #            source:
+  #              type: fun
+  #              name: self.get_seggi
+  #          df_partiti_filtrato:
+  #            source:
+  #              totals: liste
+  #              args:
+  #                - elette
+  #              rename:
+  #                Partito: Eleggibile
+  #                Voti: Votes
+  #          df_partiti_regioni:
+  #            source:
+  #              totals: regioniListe
+  #              args:
+  #                - regione
+  #              rename:
+  #                Partito: Eleggibile
+  #                Voti: Votes
+  #          dividi_partiti:
+  #            True

@@ -4,6 +4,8 @@ from pandas.plotting import table
 
 def draw_output(final_output) :
 
+
+    
     raw_data = {'NomeLista': df_final_distribution['Eleggibile'], 
         'Votes': df_final_distribution['Votes'],
         'Seats': df_final_distribution['Seats']}

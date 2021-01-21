@@ -1,10 +1,14 @@
 import pandas as pd
 import src.GlobalVars as gv
+import numpy as np
 
 pd.options.mode.chained_assignment = None
 
 
-def distrib_porcellum(*a, data, seats, df_partiti_filtrato, df_partiti_regioni, **kwargs):
+# SEZIONE DISTRIBUZIONE <-------------------------------------------------------- #
+
+
+def distrib_porcellum(*a, data, seats, df_partiti_filtrato, df_partiti_regioni, dividi_partiti, **kwargs):
     print("\n---> TROVO LA DISTRIBUZIONE DEI SEGGI CON IL PORCELLUM <---\n")
 
     # df_coalizioni è un dataframe che contiene le coalizioni
@@ -109,12 +113,11 @@ def distrib_porcellum(*a, data, seats, df_partiti_filtrato, df_partiti_regioni, 
     print(df_eleggibili)
 
 
-    df_final_distribution = dividi_per_partiti(df_eleggibili, df_partiti, df_coalizioni)
-    
-    print('DISTRIBUZIONE FINALE CON PARTITI')
-    print(df_final_distribution)
+    print("\nSUDDIVIDO I SEGGI TRA I PARTITI")
+    df_nazionale_partiti = dividi_per_partiti(df_eleggibili, df_partiti, df_coalizioni)
+    print(df_nazionale_partiti)
 
-    return df_final_distribution
+    return df_nazionale_partiti
 
 
 def distrib_porcellum_aosta(*a, data, **kwargs):
@@ -142,6 +145,9 @@ def distrib_porcellum_estero(*a, seats, data, **kwargs):
     df_estero['Seggi'] = 0
 
     return df_estero
+
+
+# SEZIONE DIVISIONE <-------------------------------------------------------- #
 
 
 def dividi_per_partiti(df_eleggibili, df_partiti, df_coalizioni):
@@ -197,155 +203,367 @@ def dividi_per_partiti(df_eleggibili, df_partiti, df_coalizioni):
             frame.append(df_partiti_in_coalizione)
         
         else :
-            frame.append(df_eleggibili[df_eleggibili['Eleggibile'] == row_eleggibili['Eleggibile']])
+            df_partito = df_eleggibili[df_eleggibili['Eleggibile'] == row_eleggibili['Eleggibile']]
+            df_partito['Coalizione'] = 'NO COALIZIONE'
+            frame.append(df_partito)
     
     # END-FOR
     df_distribuzione_finale = pd.concat(frame)
 
     df_distribuzione_finale = df_distribuzione_finale.drop(['Remainder', 'RemainderUsed'], axis=1)
+    df_distribuzione_finale = df_distribuzione_finale.rename({'Eleggibile': 'Partito'}, axis=1)
 
     return df_distribuzione_finale
 
 
 def divisione_circoscrizionale_seggi(*, information, distribution, district_votes, seggi, **kwargs):
 
-    #print("ESEGUO divisione_circoscrizionale_seggi")
+    voti_nazionali = information[1]
+    numero_seggi_nazione = distribution['Seggi'].sum()
 
-    info = information[1]
+    tot_voti_nazione = 0
+    for index, value in voti_nazionali.items():
+        tot_voti_nazione += value.get('Voti')
+    
+    quoziente_nazionale = tot_voti_nazione / numero_seggi_nazione
+
     numero_seggi_circoscrizione = seggi[0]
 
-    voti_circoscrizione = district_votes.set_index('Partito')['Voti']
 
-    risultato = []
+    lista_coalizioni_partiti = distribution['Coalizione'].unique()
+    lista_coalizioni_partiti = np.delete(lista_coalizioni_partiti, np.argwhere(lista_coalizioni_partiti=='NO COALIZIONE'))
+    lista_coalizioni_partiti = np.append(lista_coalizioni_partiti, distribution[distribution['Coalizione'] == 'NO COALIZIONE']['Partito'].unique())
+
+    distribuzione_circ = pd.DataFrame(lista_coalizioni_partiti, columns= ['Eleggibile'])
+    distribuzione_circ['Seggi'] = 0
+    distribuzione_circ['Indice'] = 0
+    distribuzione_circ['Voti_Circ'] = 0
+    distribuzione_circ['Resto'] = 0
+    distribuzione_circ['Resto_Usato'] = False
+
+    for elem in lista_coalizioni_partiti:
+
+        tot_voti_circ = 0
+        indice_relativo = 0
+
+        df_elem = district_votes[district_votes['Coalizione'] == elem]
+        if len(df_elem) > 0 :
+             tot_voti_circ = df_elem['Voti'].sum()
+        else:
+            df_elem = district_votes[district_votes['Partito'] == elem]
+            tot_voti_circ = int(df_elem['Voti'].sum())
+        
+        if elem == 'ITALIA. BENE COMUNE':
+            quoziente_nazionale = 10049393 // 340
+        else :
+            quoziente_nazionale = 22206547 // 277
+        
+        indice_relativo = tot_voti_circ / quoziente_nazionale
+
+        i = distribuzione_circ.index[distribuzione_circ['Eleggibile'] == elem].tolist()
+        distribuzione_circ['Voti_Circ'][i] = tot_voti_circ
+        distribuzione_circ['Indice'][i] = indice_relativo
     
-    for index, row in distribution.iterrows():
+    somma_indici = distribuzione_circ['Indice'].sum()
 
-        partito = row['Eleggibile']
-        numero_seggi = row['Seggi']
-        voti_partito = voti_circoscrizione.get(partito, 0)
-        
-        voti_nazionali_partito = info[partito]['Voti']
-        
-        if numero_seggi == 0:
+    distribuzione_circ['Seggi'] = (distribuzione_circ['Indice'] * numero_seggi_circoscrizione) // somma_indici
+    distribuzione_circ['Resto'] = ((distribuzione_circ['Indice'] * numero_seggi_circoscrizione) / somma_indici) - distribuzione_circ['Seggi']
+    distribuzione_circ['Seggi'] = distribuzione_circ['Seggi'].astype("int")
+    
+    seggi_restanti = numero_seggi_circoscrizione - distribuzione_circ['Seggi'].sum()
+
+    distribuzione_circ.sort_values('Resto', ascending=False, inplace=True)
+    distribuzione_circ.reset_index(drop=True, inplace=True)
+
+    for i in range(seggi_restanti):
+        distribuzione_circ['Resto_Usato'][i] = True
+        seggi_new = int(distribuzione_circ['Seggi'][i]) + 1
+        distribuzione_circ['Seggi'][i] = seggi_new
+
+
+    return distribuzione_circ
+
+
+def divisione_circoscrizionale_partiti(*, information, distribution, district_votes, seggi, distretto, **kwargs):
+
+    lista_partiti = information[1].keys() # lista dei partiti spettanti di seggi #
+
+    lista_coalizioni = district_votes['Coalizione'].unique()
+    lista_coalizioni = np.delete(lista_coalizioni, np.argwhere(lista_coalizioni=='NO COALIZIONE')) # lista coalizioni spettanti di seggi #
+
+    numero_seggi_circoscrizione = seggi[0]
+
+    district_votes_filtrato = district_votes[district_votes['Partito'].isin(lista_partiti)]
+    lista_partiti_circoscrizione = district_votes_filtrato['Partito'].unique()
+
+    lista_partiti_senza_coal = district_votes_filtrato[district_votes_filtrato['Coalizione'] == 'NO COALIZIONE']['Partito'].unique()
+    lista_partiti_senza_coal = [value for value in lista_partiti_senza_coal if value in lista_partiti] # lista di partiti non in coalizioni spettanti seggi in questa circoscrizione #
+    
+    distribuzione_coalizioni_circ = distribution.get(distretto)
+
+    # voti_coalizioni, dizionario :
+    #   - chiave : nome coalizione
+    #   - valore : dizionario con chiavi Voti, Seggi, Quoziente
+    info_coalizioni = {}
+    for elem in lista_coalizioni:
+        info = {'Voti' : 0, 'Seggi' : 0, 'Quoziente' : 0}
+
+        tot_voti_coalizione = district_votes_filtrato[district_votes_filtrato['Coalizione'] == elem]['Voti'].sum()
+        info['Voti'] = tot_voti_coalizione
+        info['Seggi'] = int(distribuzione_coalizioni_circ[distribuzione_coalizioni_circ['Eleggibile'] == elem]['Seggi'])
+        if info['Seggi'] > 0 :
+            info['Quoziente'] = info['Voti'] // info['Seggi']
+
+        info_coalizioni[elem] = info
+    
+    #print(info_coalizioni)
+
+    
+    # per ogni coalizione devo dividere i seggi #
+    frame = []
+    for coal, info in info_coalizioni.items():
+        distrib_coal = district_votes_filtrato[district_votes_filtrato['Coalizione'] == coal]
+        distrib_coal['Seggi'] = 0
+        distrib_coal['Resto'] = 0
+        distrib_coal['Resto_Usato'] = False
+
+        if info['Quoziente'] == 0 :
             continue
 
-        q = voti_nazionali_partito / numero_seggi
+        distrib_coal['Seggi'] = distrib_coal['Voti'] // info['Quoziente']
+        distrib_coal['Seggi'] = distrib_coal['Seggi'].astype("int")
+        distrib_coal['Resto'] = (distrib_coal['Voti'] / info['Quoziente']) - distrib_coal['Seggi']
 
-        seggi_assegnati, resto = divmod(voti_partito, q)
-        seggi_assegnati = int(voti_partito / q)
-        resto = (voti_partito / q) - seggi_assegnati
+        restanti = info['Seggi'] - distrib_coal['Seggi'].sum()
+        distrib_coal.sort_values('Resto', ascending=False, inplace=True)
 
-        risultato.append(pd.Series({'Partito': partito, 'Seggi': seggi_assegnati, 'Resto': resto, 'Voti': voti_partito}))
+        distrib_coal.iloc[:restanti, distrib_coal.columns.get_loc('Resto_Usato')] = True
+        distrib_coal.iloc[:restanti, distrib_coal.columns.get_loc('Seggi')] += 1
+        distrib_coal.sort_values('Seggi', ascending=False, inplace=True)
+
+        frame.append(distrib_coal)
+    
+    for partito in lista_partiti_senza_coal:
+        row_partito = distribuzione_coalizioni_circ[distribuzione_coalizioni_circ['Eleggibile'] == partito]
+        row_partito.rename(columns={'Voti_Circ': 'Voti'}, inplace=True)
+        row_partito['Partito'] = partito
+        row_partito['Coalizione'] = 'NO COALIZIONE'
+        row_partito['Resto'] = 0
+        row_partito['Resto_Usato'] = False
+
+        frame.append(row_partito)
+
+    
+    distrib_seggi_partiti = pd.concat(frame)
+
+    return distrib_seggi_partiti
 
 
-    #ret = pd.concat(risultato, axis=1).T
-    ret = pd.DataFrame(risultato)
-
-    ret['Seggi'] = ret['Seggi'].astype("int")
-
-    #print(ret)
-
-    seggi_rimanenti = seggi - ret['Seggi'].sum()
-
-    assegna_a_tutti, resto = divmod(seggi_rimanenti, len(ret.index))
-
-    ret['Seggi'] += assegna_a_tutti
-
-    ret.sort_values('Resto', ascending=False, inplace=True)
-
-    resto = int(resto)
-    ret.loc[:resto, 'Seggi'] += 1
-
-    #print(ret)
-
-    return ret
+# SEZIONE CORREZIONE <-------------------------------------------------------- #
 
 
 def correct_porcellum(distretto, distribuzione_ideale, distribuzione_raccolta,
                     info_locali, *info_comuni):
     
-    #print("---> CORRECT PORCELLUM <---")
+    print("---> CORRECT PORCELLUM <---")
+    print(distribuzione_ideale)
 
-    # distribuzione_raccolta è un dizionario che contiene un distribuzione dei
-    # seggi suddivisa però per circoscrizione
-    #
-    # prende la distribuzione passata
-    # con i dati europei la prima distribuzione passata sarà quella generale
-    # in cui ogni partito avrà il numero totale di seggi che gli vengono assegnati
-    #
-    #                        Partito     Seggi
-    #       8   LEGA SALVINI PREMIER     30
-    #       12   PARTITO DEMOCRATICO     20
-    #       6      FRATELLI D'ITALIA      5
-    #       4           FORZA ITALIA      7
-    #       9     MOVIMENTO 5 STELLE     14 
-    #
-    # #
-    ideal = distribuzione_ideale
+    lista_coalizioni_partiti = distribuzione_ideale['Coalizione'].unique()
+    lista_coalizioni_partiti = np.delete(lista_coalizioni_partiti, np.argwhere(lista_coalizioni_partiti=='NO COALIZIONE'))
+    lista_coalizioni_partiti = np.append(lista_coalizioni_partiti, distribuzione_ideale[distribuzione_ideale['Coalizione'] == 'NO COALIZIONE']['Partito'].unique())
 
-    actual_distr = {}
-    resti = {}
-    
-    for k, v in distribuzione_raccolta.items() :
+    lista_seggi_assegnati = {}
+    lista_seggi_eccedenti = {}
 
-        for _, r in v.iterrows():
+    for elem in lista_coalizioni_partiti :
 
-            party = r['Partito'] # prendo la lista di questa riga
-            o_segg = actual_distr.get(party, 0) # prendo il numero di seggi di questo partito
-                                                # se non è presente di default è 0
+        tot_seggi_assegnati_circ = 0
 
-            actual_distr[party] = r['Seggi'] + o_segg # aggiungo il numero di seggi al partito
-
-            o_resti = resti.get(party, {}) # prendo il numero di resti del partito
-                                           # se non è presente di defaul ho dizionario vuoto
-
-            o_resti[k] = info_locali[k][party]['Resto'] # prendo il resto del partito in questa circoscrizione
-            resti[party] = o_resti # setto in un dizionario locale il resto
-    
-    # copia distribuzione_raccolta in df_r
-    df_r = {k: v.set_index('Partito') for k, v in distribuzione_raccolta.items()}
-
-    for _, r in ideal.iterrows():
-
-        p = r['Eleggibile']
-        s = r['Seggi']
-
-        # conta la differenza di seggi tra la distribuzione ideale
-        # (ovvero quella con il numero di seggi totali)
-        # rispetto alla distribuzione attuale
-        # (ovvero quella con il numero di seggi divisi per circoscrizione)
-        diff = int(s - actual_distr.get(p,0))
-
-        # se non ho differenza continua
-        if diff == 0:
-            continue
-
-        # ora ordina i partiti per il valore del resto con il piu alto per primo
-        #
-        # ok ruffati, ma come lo sai in che circoscrizione lo devi aggiungere ?
-        # te lo dicono per messaggio segreto ? mazzette ?
-        # so in che circoscrizioni devo aggiungere
-        #
-        # in pratica questa è una lista di circoscrizioni con rispettivi resti in cui
-        # si dovranno aggiungere i seggi
-        # in qualche modo questa funzione lo fa
-        #
-        # credo che prenda l'intera lista e poi tenga solamente le prime n (n = diff) circoscrizoni
-        # con resto piu alto
-        resti_p = sorted(list(resti[p].items()), key=lambda x: x[1], reverse=True)[:diff]
+        for distrib_circ in distribuzione_raccolta.values() :
+            tot_seggi_assegnati_circ += int(distrib_circ[distrib_circ['Eleggibile'] == elem]['Seggi'].sum())
         
-        # ora assegno i seggi mancanti ai pariti
-        for distr, _ in resti_p:
-            if p not in df_r[distr].index:
-                df_r[distr].loc[p, 'Seggi'] = 0
-            df_r[distr].loc[p,'Seggi'] += 1
+        lista_seggi_assegnati[elem] = tot_seggi_assegnati_circ
 
-    ret = {k: v.reset_index() for k, v in df_r.items()}, {},{}
+        numero_seggi_coalizione_partito = distribuzione_ideale[distribuzione_ideale['Coalizione'] == elem]['Seggi'].sum()
+        if numero_seggi_coalizione_partito == 0 :
+            numero_seggi_coalizione_partito = distribuzione_ideale[distribuzione_ideale['Partito'] == elem]['Seggi'].sum()
 
-    #print("RET")
-    #print(ret)
+        lista_seggi_eccedenti[elem] = tot_seggi_assegnati_circ - numero_seggi_coalizione_partito
     
-    # restituisco la nuova distribuzione
+    lista_seggi_eccedenti = dict(sorted(lista_seggi_eccedenti.items(), key=lambda item: item[1], reverse=True))
+
+    #print(lista_seggi_eccedenti)
+    eleggibili_seggi_mancanti = {}
+    eleggibili_seggi_eccedenti = {} 
+
+    for eleggibile, seggi in lista_seggi_eccedenti.items() :
+        if seggi < 0:
+            eleggibili_seggi_mancanti[eleggibile] = seggi
+        elif seggi > 0:
+            eleggibili_seggi_eccedenti[eleggibile] = seggi
+    
+    lista_info_eleggibili = {}
+
+    for eleggibile, seggi_eccedenti in eleggibili_seggi_eccedenti.items() :
+        
+        dict_info_circ = {}
+        for circ, distrib_circ in distribuzione_raccolta.items():
+
+            # Prendo solo dove i seggi vengono assegnati grazie alla parte decimale 
+            # se non ho assegnato un seggio grazie alla parte decimale non includo le info #
+            if distrib_circ[distrib_circ['Eleggibile'] == eleggibile]['Resto_Usato'].item() == True: #and seggi_eccedenti > 0#
+                dict_info_distribuzione = {}
+                dict_info_distribuzione['Seggi'] = int(distrib_circ[distrib_circ['Eleggibile'] == eleggibile]['Seggi'])
+                dict_info_distribuzione['Resto'] = distrib_circ[distrib_circ['Eleggibile'] == eleggibile]['Resto'].item()
+
+                dict_info_circ[circ] = dict_info_distribuzione
+
+        dict_info_circ = dict(sorted(dict_info_circ.items(), key=lambda item: item[1].get('Resto'), reverse=False))
+        lista_info_eleggibili[eleggibile] = dict_info_circ
+
+    
+    
+    for eleggibile, seggi_eccedenti in eleggibili_seggi_eccedenti.items() :
+        info_resti_coal = lista_info_eleggibili.get(eleggibile, {})
+
+        for circ in info_resti_coal.keys():
+                # se la coalizione ha ancora seggi eccedenti allora continuo a toglierli#
+                distrib_circ = distribuzione_raccolta.get(circ)
+                i_eccedenti = distrib_circ.index[distrib_circ['Eleggibile'] == eleggibile].tolist()
+
+                if distrib_circ['Seggi'][i_eccedenti].item() > 0:
+
+                    df_eleggibile_seggi_mancanti = distrib_circ[distrib_circ['Eleggibile'].isin(eleggibili_seggi_mancanti.keys())]
+                    df_eleggibile_seggi_mancanti = df_eleggibile_seggi_mancanti[df_eleggibile_seggi_mancanti['Resto_Usato'] == False]
+                    df_eleggibile_seggi_mancanti.sort_values('Resto', ascending=False, inplace=True)
+
+                    if len(df_eleggibile_seggi_mancanti) > 0:
+                        eleggibile_assegnatario_seggio = df_eleggibile_seggi_mancanti.iloc[0]['Eleggibile']
+                        i_mancanti = distrib_circ.index[distrib_circ['Eleggibile'] == eleggibile_assegnatario_seggio].tolist()
+
+                        distrib_circ['Seggi'][i_eccedenti] -= 1
+                        distrib_circ['Seggi'][i_mancanti] += 1
+
+                        eleggibili_seggi_eccedenti[eleggibile] -= 1
+                        eleggibili_seggi_mancanti[eleggibile_assegnatario_seggio] += 1
+
+                        if eleggibili_seggi_eccedenti[eleggibile] == 0:
+                            break;
+    
+
+    #for circ, distr in distribuzione_raccolta.items():
+    #    print(circ)
+    #    print(distr)
+    #    print()
+    
+    # restituisco la nuova distribuzione circoscrizionale
+    seggi_coal = {}
+    for _,row in distribuzione_ideale.iterrows():
+        dict_seggi = {'Seggi': row['Seggi']}
+        seggi_coal[row['Partito']] = dict_seggi
+
+    ret = distribuzione_raccolta, {}, seggi_coal
+
+    return ret
+
+
+def correct_porcellum_partiti(distretto, distribuzione_ideale, distribuzione_raccolta,
+                    info_locali, *info_comuni):
+    
+    #print("CORRECT_PORCELLUM_PARTITI")
+
+    lista_partiti = info_comuni[0].keys()
+
+    lista_seggi_assegnati = dict.fromkeys(lista_partiti, 0)
+    lista_differenza_seggi = dict.fromkeys(lista_partiti, 0)
+
+    for circ, distr in distribuzione_raccolta.items():
+        for _, row in distr.iterrows():
+            lista_seggi_assegnati[row['Partito']] += row['Seggi']
+    
+    for partito, seggi_assegnati in lista_seggi_assegnati.items():
+        lista_differenza_seggi[partito] = lista_seggi_assegnati[partito] - info_comuni[0][partito].get('Seggi')
+
+    lista_differenza_seggi = dict(sorted(lista_differenza_seggi.items(), key=lambda item: item[1], reverse=True))
+
+    lista_seggi_mancanti = {}
+    lista_seggi_eccedenti = {}
+
+    for partito, seggi in lista_differenza_seggi.items() :
+        if seggi < 0:
+            lista_seggi_mancanti[partito] = seggi
+        elif seggi > 0:
+            lista_seggi_eccedenti[partito] = seggi
+    
+
+    lista_info_partiti = {}
+
+    for partito, seggi_eccedenti in lista_seggi_eccedenti.items() :
+        
+        dict_info_circ = {}
+        for circ, distrib_circ in distribuzione_raccolta.items():
+
+            # Prendo solo dove i seggi vengono assegnati grazie alla parte decimale 
+            # se non ho assegnato un seggio grazie alla parte decimale non includo le info #
+            lunghezza = len(distrib_circ[distrib_circ['Partito'] == partito]['Resto_Usato'])
+            if lunghezza > 0 and distrib_circ[distrib_circ['Partito'] == partito]['Resto_Usato'].item() == True:
+                dict_info_distribuzione = {}
+                dict_info_distribuzione['Seggi'] = int(distrib_circ[distrib_circ['Partito'] == partito]['Seggi'])
+                dict_info_distribuzione['Resto'] = distrib_circ[distrib_circ['Partito'] == partito]['Resto'].item()
+
+                dict_info_circ[circ] = dict_info_distribuzione
+
+        dict_info_circ = dict(sorted(dict_info_circ.items(), key=lambda item: item[1].get('Resto'), reverse=False))
+        lista_info_partiti[partito] = dict_info_circ
+
+    
+    for partito, seggi_eccedenti in lista_seggi_eccedenti.items() :
+
+        info_resti_partito = lista_info_partiti.get(partito, {})
+
+        #print(lista_seggi_mancanti)
+        #print(lista_seggi_eccedenti)
+
+        for circ in info_resti_partito.keys():
+                # se la coalizione ha ancora seggi eccedenti allora continuo a toglierli#
+                distrib_circ = distribuzione_raccolta.get(circ)
+                distrib_circ.reset_index(drop=True, inplace=True)
+
+                i_eccedenti = distrib_circ.index[distrib_circ['Partito'] == partito].tolist()
+
+                if distrib_circ['Seggi'][i_eccedenti].item() > 0:
+
+                    df_partiti_seggi_mancanti = distrib_circ[distrib_circ['Partito'].isin(lista_seggi_mancanti.keys())]
+                    df_partiti_seggi_mancanti = df_partiti_seggi_mancanti[df_partiti_seggi_mancanti['Resto_Usato'] == False]
+                    df_partiti_seggi_mancanti.sort_values('Resto', ascending=False, inplace=True)
+
+                    if len(df_partiti_seggi_mancanti) > 0:
+                        partito_assegnatario_seggio = df_partiti_seggi_mancanti.iloc[0]['Partito']
+                        i_mancanti = distrib_circ.index[distrib_circ['Partito'] == partito_assegnatario_seggio].tolist()
+
+                        #print(i_eccedenti)
+                        #print(distrib_circ)
+
+                        distrib_circ['Seggi'][i_eccedenti] -= 1
+                        distrib_circ['Seggi'][i_mancanti] += 1
+                        distrib_circ['Resto_Usato'][i_mancanti] = True
+                        
+                        lista_seggi_eccedenti[partito] -= 1
+                        lista_seggi_mancanti[partito_assegnatario_seggio] += 1
+
+                        if lista_seggi_mancanti[partito_assegnatario_seggio] == 0:
+                            lista_seggi_mancanti.pop(partito_assegnatario_seggio, None)
+                        if lista_seggi_eccedenti[partito] == 0:
+                            break;
+                        
+
+
+    ret = distribuzione_raccolta, {}, {}
+    #for circ, distr in ret[0].items() :
+    #    print(circ)
+    #    print(distr)
+    #    print()
+
     return ret
 
 
@@ -373,15 +591,6 @@ def correct_porcellum_estero(distretto, distribuzione_ideale, distribuzione_racc
 
             ideale['Seggi'][i] = new_seggi
     
-
-    #dizionario_voti = info_comuni[0]
-    #for key, value in dizionario_voti.items():
-    #   
-    #    lista = key
-    #    voti = value.get('Voti', 0)
-    #
-    #    i = ideale.index[ideale['Lista'] == lista].tolist()
-    #    ideale['Voti'][i] = voti
     
     ideale.sort_values('Seggi', ascending=False, inplace=True)
     
@@ -392,37 +601,7 @@ def correct_porcellum_estero(distretto, distribuzione_ideale, distribuzione_racc
     return ret
 
 
-def divisione_circoscrizionale_seggi(*, information, distribution, district_votes, seggi, **kwargs):
-
-    #print("ESEGUO divisione_circoscrizionale_seggi")
-
-    info = information[1]
-
-    voti_circoscrizione = district_votes.set_index('Partito')['Voti']
-
-    risultato = []
-    
-    for index, row in distribution.iterrows():
-
-        partito = row['Eleggibile']
-        numero_seggi = row['Seggi']
-        voti_partito = voti_circoscrizione.get(partito, 0)
-        
-        voti_nazionali_partito = info[partito]['Voti']
-        
-        if numero_seggi == 0:
-            continue
-
-        q = voti_nazionali_partito / numero_seggi
-
-        seggi_assegnati, resto = divmod(voti_partito, q)
-
-        risultato.append(pd.Series({'Partito': partito, 'Seggi': seggi_assegnati, 'Resto': resto, 'Voti': voti_partito}))
-
-
-    ret = pd.concat(risultato, axis=1).T
-
-    return ret
+# SEZIONE VISUALIZZAZIONE <-------------------------------------------------------- #
 
 
 def printing_visuals(lista) :

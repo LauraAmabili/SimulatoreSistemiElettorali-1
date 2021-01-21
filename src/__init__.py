@@ -65,4 +65,4 @@ def run_simulation(path):
     # tutte le informazioni tutte le volte, cambiare alla fine
     final_virtual_result = "FINE ESECUZIONE"
 
-    return final_virtual_result
+    return final_result

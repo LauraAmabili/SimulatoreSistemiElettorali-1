@@ -3,6 +3,9 @@ metaclasses:
   - lanes
   - external
 
+
+# sezione di configuazione della classe Valle_Aosta #
+
 external:
   voti_valle_d_aosta:
     columns:
@@ -10,6 +13,8 @@ external:
       - VOTI_LISTA -> Voti
     
 
+
+# LANE SECTION <------------------------------------- #
 
 lane:
   valle_d_aosta:
@@ -33,6 +38,8 @@ lanes_propose:
     info:
       - Numero
 
+    
+# TOTALS SECTION <------------------------------------- #
 
 totals:
   liste:
@@ -57,11 +64,6 @@ totals_support:
   valle_d_aosta:
     source:
       totals: liste
-      #args:
-      #  - elette
-      #rename:
-      #  Coalizione: Eleggibile
-      #  Voti: Votes
     type: transform
     ops:
       - type: dataframe

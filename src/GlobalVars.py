@@ -66,7 +66,8 @@ class ActHub:
                     self.elected[i] = info
                 exec_return = [self.electors, self.elected]
             else: 
-                exec_return = ret
+                for district, name_lista, elector, seats in ret:
+                     exec_return.append((district.name, name_lista, elector, seats))
                 
         return exec_return
 
