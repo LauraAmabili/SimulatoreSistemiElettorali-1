@@ -10,6 +10,9 @@ external:
     # I seggi assegnati
     init: True
     type: int
+  premio_maggioranza:
+    init: True
+    type: int
   circoscrizioni:
     init: True
 
@@ -61,6 +64,7 @@ lanes_propose:
       - Partito
       - Seggi
       - Coalizione
+      - VotiCoalizione
     info:
       - Voti
   
@@ -68,7 +72,6 @@ lanes_propose:
     source:
       type: fun
       name: self.distribuisci_seggi
-      #name: self.distribuisci_seggi_partiti
       rename:
         Votes: Voti
         Seats: Seggi
@@ -165,43 +168,7 @@ totals_support:
                 rename:
                   Partito: Eleggibile
                   Voti: Votes
-            dividi_partiti:
-              False
-  
-  #distribuisci_seggi_partiti:
-  #  source:
-  #    totals: coalizioni
-  #    args:
-  #      - elette
-  #    rename:
-  #      Coalizione: Eleggibile
-  #      Voti: Votes
-  #  type: transform
-  #  ops:
-  #    - type: dataframe
-  #      source:
-  #        type: fun
-  #        name: Commons.distrib_porcellum
-  #        kwargs:
-  #          seats:
-  #            source:
-  #              type: fun
-  #              name: self.get_seggi
-  #          df_partiti_filtrato:
-  #            source:
-  #              totals: liste
-  #              args:
-  #                - elette
-  #              rename:
-  #                Partito: Eleggibile
-  #                Voti: Votes
-  #          df_partiti_regioni:
-  #            source:
-  #              totals: regioniListe
-  #              args:
-  #                - regione
-  #              rename:
-  #                Partito: Eleggibile
-  #                Voti: Votes
-  #          dividi_partiti:
-  #            True
+            premio_maggioranza:
+              source:
+                type: fun
+                name: self.get_premio_maggioranza

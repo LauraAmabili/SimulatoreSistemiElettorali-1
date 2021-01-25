@@ -1,10 +1,10 @@
 # Simulatore di sistemi elettorali
 
-Un framework per modellare e simulare sistemi elettorali
+Framework per l'elaborazione di sistemi elettorali
 
 ## Modo d'uso
 
-Creare una cartella con la seguente struttura:
+Creare una cartella in Electoral Laws/nome_legge con la seguente struttura:
 + Data
 + Instances
 + Classes
@@ -15,7 +15,7 @@ nelle cartelle
 Eseguire in questa cartella:
 
 ```shell script
-python -m src /path/to/folder
+python -m src /path/to/folder_nome_legge
 ```
 
 o in una console python:

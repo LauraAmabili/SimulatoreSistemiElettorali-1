@@ -58,11 +58,11 @@ def run_simulation(path):
                 r = GlobalVars.Hub.get_instance(f, k)
                 getattr(r, f'give_{name}')(data.iloc[:, 1:])
 
-     # run_exec fa cominciare tutta la cascata di operazioni
+     # run_exec fa partire l'esecuzione 
     final_result = src.GlobalVars.Hub.run_exec()
 
-    # questo risultato virtuale è stato creato solamente per non stampare a video
-    # tutte le informazioni tutte le volte, cambiare alla fine
-    final_virtual_result = "FINE ESECUZIONE"
+    #print(final_result)
+    final_visual_result = commons.printing_visuals(final_result)
+
 
     return final_result

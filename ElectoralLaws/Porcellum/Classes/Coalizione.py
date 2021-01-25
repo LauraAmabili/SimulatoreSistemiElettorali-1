@@ -49,7 +49,7 @@ class Coalizione(metaclass=comb_p, **conf):
         percentuali_regionali_partiti = {}
         percentuali_nazionali_partiti = {}
 
-        # riempio dizionari delle percentuali #
+        # riempio dizionari delle percentuali dei voti presi nella classe party#
         for partito in partiti :
             istanza_partito = gv.Hub.get_instance('PolEnt', partito)
             percentuali_nazionali_partiti[partito] = istanza_partito.percNazione

@@ -69,3 +69,11 @@ def distrib_europee(*a, data, seats, **kwargs):
     data.iloc[:r, data.columns.get_loc('Seats')] += 1
     print("Risultato hondt:", data)
     return data
+
+
+
+def printing_visuals(dataset) :
+
+    #printing visuals not defined for europee
+
+    return 0

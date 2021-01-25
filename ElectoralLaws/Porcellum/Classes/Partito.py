@@ -78,8 +78,6 @@ class Partito(metaclass=comb_p, **conf):
         # del 4% dei voti totali nazionali #
         if sbarramenti[0] == 'elette' and district.type == 'Nazione':
 
-            #print("eseguo filter di partito in ", district.type)
-
             tot_voti = dataframe['Voti'].sum()
             # calcolo il numero di voti totali del partito
             solo_righe_partito = dataframe[dataframe['Partito'] == row['Partito']]
