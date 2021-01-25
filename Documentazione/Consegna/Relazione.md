@@ -36,6 +36,10 @@ La Legge Calderoli è infatti caratterizzata da :
 Lo sviluppo dell'implementazione della Legge Calderoli si è svolto in quattro principali fasi :
 
 1. **Comprensione della struttura precedentemente svilluppata.** <br> Come detto nell'introduzione mi è stato consegnato un progetto di un precedente studente, ho dovuto quindi analizzare e capire la struttura già presente per decidere come inserire nel modo più adeguato la Legge Elettorale.
+Il progetto che ho ricevuto procede in tre principali passi :
+    1. Prelevare i file di configurazione delle classi della Legge Elettorale e creare le struttura a runtime
+    2. Istanziare le classi appena create tramite altri file dedicati all'istanziazione
+    3. Iniziare l'esecuzione delle lane definite e ritorno dell'output
 
 2. **Comprendere la Legge Elettorale da implementare.** <br> Dopo aver compreso come il progetto funzionava, ho studiato più nel dettaglio come la Legge Calderoli operava ed elaborava le informazioni per cominciare ad avere un'idea dei passaggi e dei paramentri di cui avrei avuto bisogno al momento della strutturazione del progetto.
 Sono arrivata a capire che :
@@ -51,7 +55,7 @@ Le scelte strutturali più importanti sono state :
 	#TODO 
     -La scelta di raggruppare tutti i partiti, non facenti parte di una coalizione di liste, dentro una coalizione chiamata 'NO COALIZIONE' la quale verrà gestita in modo speciale dai filtri dentro la classe coalizione. Questa scelta implementativa mi ha evitato il dover combinare più sorgenti di dati dentro ai metodi, permettendomi di prelevare tutte le informazioni cercate direttamente dalla stessa fonte.
     
-Le funzionalità che invece mi mancavano erano tutte quelle dedicate all'elaborazione dei voti secondo i processi della Legge Calderoli, quindi :
+	Le funzionalità che invece mi mancavano erano tutte quelle dedicate all'elaborazione dei voti secondo i processi della Legge Calderoli, quindi :
 	- La gestione del premio di maggioranza
 	- La correzione della distribuzione dei seggi a livello nazionale
 	- La suddivisione dei seggi di una coalizione tra i suoi partiti a livello nazionale
@@ -61,24 +65,7 @@ Le funzionalità che invece mi mancavano erano tutte quelle dedicate all'elabora
 	- La correzione della distribuzione dei seggi ai partiti a livello circoscrizionale
 inoltra mancavano anche le funzionalità di gestione delle coalizioni e le funzionalità specifiche per la gestione delle soglie di sbarramento nel modo definito dalla Legge Calderoli.
 
-4. **Acquisizione dati e sviluppo.** <br> Dopo aver abbozzato una prima versione del progetto ho cominciato a ricercare i dati che ritenevo più utili per il testing delle funzionalità e successivamente ho iniziato lo sviluppo del codice. x
-
-
-## Setup Ambiente
-
-Il progetto è stato ideato per essere estendibile e flessibile, tuttavia per comprendere completamente la struttura c'è stato bisogno di prestare particolare attenzione ad alcuni passi iniziali.
-
-1. Il programma prevede una minima modifica al comportamento di base in base alla legge che si sta implementando, ma è necessario inserire in src/Commons file inerenti alle configurazioni di classe. Infatti in src l'unica classe che specifica metodi particolari per la legge elettoral è la corrispettiva src/Commons/Porcellum.py. Questa classe è necessaria per sviluppare le funzioni che saranno poi chiamate dalle classe istanziate. 
-In src/Metaclasses sono invece gestite la creazione delle Classi e altre gestioni SPIEGA METACLASSES 
-2. La creazione delle classi che verranno utilizzate viene fatto tramite file yaml o file python per classi più complessi.  Ad ogni file corrisponde una classe e tramite questi file definiamo il comportamento del componente. 
-Per fare questo bisogna aver chiara la struttura che si vuole implementare e quindi aver compreso la legge elettorale. Il porcellum, nota come Legge Calderoli, è una legge proporzionale con premio di maggioranza e liste bloccate, che permette alle liste di formare Coalizioni. Per iniziare vediamo subito che avremo bisogno di creare l'entità Nazione, Coalizione, Partito, Circoscrizione e non necessiteremo di Candidato perchè le liste bloccate non permettevano un voto di preferenza. 
-Maggiori informazioni sul Porcellum si possono trovare qui INSERIRE COLLEGAMENTO. 
-In base alle classi dovremmo definire le istanze, tramite file yaml. I parametri con cui creare le istanze sono definite da questi file. Le istanze si riferiscono alle Classi create in precedenza e rappresentano la definizione delle Entità Politiche che andremo ad utilizzare. Per esempio nel nostro caso avremo le Coalizioni che sono state create, i Partiti, le Circoscrizioni. 
-
-a. Il progetto che ho ricevuto procede in tre principali passi :
-    1. Prelevare i file di configurazione delle classi della legge elettorale e creare le struttura a runtime
-    2. Istanziare le classi appena create tramite altri file dedicati all'istanziazione
-    3. Elaborazione dei dati e ritorno dell'output
+4. **Acquisizione dati e sviluppo.** <br> Dopo aver abbozzato una prima versione del progetto ho cominciato a ricercare i dati che ritenevo più utili per il testing delle funzionalità e successivamente ho iniziato lo sviluppo del codice.
 
 
 ## Dati
@@ -117,7 +104,22 @@ Il percorso di sviluppo non è certo stato privo di difficoltà. Le principali s
 
 ## Output
 
-Per generare l'output ho voluto creare una rappresentazione più semplice ma effettiva possibile ed ho pensato che un grafico a torta fosse ideale. Per ogni divisione che si vuole rappresentare si chiama printingVisuals e modificando i campi che si vogliono mostrare verranno create le strutture dati (Array/DataFrame) corrette per visualizzare lo schema. Ho utilizzato una libreria di Pandas e tutti gli output sono strutturati con un grafico a torta che riporta le percentuali sul totale ed una tabella che mostra gli effettivi seggi. 
+Il programma genera un duplice output, testuale e visivo. <br>
+L'output testuale è formattato in modo da essere una lista di gruppo d'informazioni.
+Ogni singolo gruppo d'informazioni conterrà :
+- Nome della circoscrizione
+- Nome della lane
+- Nome del partito
+- Numero dei seggi ricevuti nella circoscrizione della lane specificate
+
+Per l'output visivo invece volevo una rappresentazione più semplice dei risultati, ma comunque efficace. La mia scelta è quindi ricaduta su un grafico a torta il quale rende immediata la comprensione della distribuzione in percentuale dei seggi.
+Per sapere invece l'effettivo numero di seggi assegni ai singoli partiti ho inserito anche una tabella contenente il nome del partito e il numero dei seggi a lui assegnati.
+
+Le immagini qua sotto sono invece state generate per scopo puramente illustrativo della relazione.
+Purtroppo la libreria utilizzata non riusciva a generare una visualizzazione di questo tipo.
+
+![image](Immagini/Rappresentazione_Seggi_617.png)
+![image](Immagini/Rappresentazione_Seggi_630.png)
 
  
 ## Limitazioni
@@ -126,9 +128,32 @@ Per generare l'output ho voluto creare una rappresentazione più semplice ma eff
 
 ## Utilizzo
 
-![image](Immagini/Rappresentazione_Camer_617.pgn)
+Per il corretto funzionamento della simulazione è necessario avere una cartella con una specifica configurazione di sottocartelle e file.
 
+La cartella principale dovrà contenere appunto le seguenti cartelle :
+- *Classes* : La quale dovrà avere al suo interno una serie di file .yaml o .py per la configurazione della struttura delle classe necessarie per la simulazione.
+- *Data* : la quale dovrà contenere al suo interno altre cartelle aventi lo stesso nome delle classi che attingeranno ai dati contenuti nell'omonima cartella.
+- *Instances* : la quale conterrà dei file .yaml contenenti i valori dei parametri delle varie istanze di ogni singola classe.
 
+Quindi nel caso di Circoscrizione_Estera avrò un file in Classes/Circoscrizione_Estera.yaml che creerà la struttura della classe definendo i parametri e i metodi, un file in Instances/Circoscrizione_Estera.yaml che riempirà i parametri delle varie istanze e una cartella Data/Circoscrizione_Estera al cui interno avrà dei file .csv aventi lo stesso nome della funzione che userà questo file per il recupero dei dati.
+
+Per esempi di configurazione di questi file rifarsi ad altri file della documentazione.
+
+Una volta configurata la cartella bisogna eseguire la simulazione usando i seguenti comandi in una console di python :
+
+```python
+import src
+src.run_simulation("/path/to/folder")
+```
+
+oppure questo comando direttamente da terminale :
+
+```shell
+python -m src /path/to/folder
+```
+
+Nel caso si volesse implementare un'ulteriore Legge Elettorale consiglio la creazione di un file dedicato nella cartella src/Commons contenente metodi specifici per l'elaborazione delle distribuzioni ed eventuali correzione previste dalla Legge Elettorale d'interesse.
+Io stessa ho creato il file Porcellum.py in cui ho inserito tutte le funzionalità di cui avevo bisogno.
 
 
 ---

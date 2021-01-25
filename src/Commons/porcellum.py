@@ -4,6 +4,7 @@ from pandas.plotting import table
 import src.GlobalVars as gv
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 
 pd.options.mode.chained_assignment = None
 
@@ -125,7 +126,7 @@ def distrib_porcellum(*a, data, seats, df_partiti_filtrato, df_partiti_regioni, 
 
 
 def distrib_porcellum_aosta(*a, data, **kwargs):
-    print("\n---> ELEGGO IL SEGGIO DELLA VALLE D'AOSTA <---\n")
+    #print("\n---> ELEGGO IL SEGGIO DELLA VALLE D'AOSTA <---\n")
 
     df_seggi_aosta = data.copy()
 
@@ -138,7 +139,7 @@ def distrib_porcellum_aosta(*a, data, **kwargs):
 
     df_seggi_aosta = df_seggi_aosta.rename(columns={'Voti': 'Numero'})
 
-    print(df_seggi_aosta)
+    #print(df_seggi_aosta)
 
     return df_seggi_aosta
 
@@ -699,8 +700,8 @@ def correct_porcellum_estero(distretto, distribuzione_ideale, distribuzione_racc
     
     ideale.sort_values('Seggi', ascending=False, inplace=True)
     
-    print("\n---> DISTRIBUZIONE DEI SEGGI ESTERI <---\n")
-    print(ideale)
+    #print("\n---> DISTRIBUZIONE DEI SEGGI ESTERI <---\n")
+    #print(ideale)
 
     ret = distribuzione_raccolta, {}, {}
     return ret
@@ -712,45 +713,108 @@ def printing_visuals(lista) :
 
 
     dataset = pd.DataFrame(lista, columns =['Circoscrizione', 'Lane', 'Partito', 'Seggi'])
-    
-    
-    dataset = dataset.loc[dataset['Lane'] == 'lista']
-    
     dataset['Seggi'] = dataset['Seggi'].astype(int)
-    
-    dataPartitoSeggi = dataset.filter(items=['Lane', 'Partito', 'Seggi'])
-    dataPartitoSeggi = dataPartitoSeggi.groupby(['Partito'])['Seggi'].sum().reset_index()
-    dataPartitoSeggi.sort_values('Seggi', ascending = False, inplace = True)
-    
 
-    print(dataPartitoSeggi)
+    listaLane = dataset['Lane'].unique()
+    print(listaLane)
     
 
-    raw_data = {'NomeLista': dataPartitoSeggi['Partito'], 
-        'Seats': dataPartitoSeggi['Seggi']}
+
+    for lane in listaLane: 
+
+        dataSeggi = dataset.filter(items=['Lane', 'Partito', 'Seggi'])
+        dataSeggi = dataSeggi.loc[dataset['Lane'] == lane]
+        dataSeggi = dataSeggi.groupby(['Partito'])['Seggi'].sum().reset_index()
+        dataSeggi.sort_values('Seggi', ascending = False, inplace = True)
+        dataSeggi =  dataSeggi.reset_index()
+        dataSeggi = dataSeggi.drop('index', axis=1)
+
+        if lane == 'lista':
+            dataPartitoSeggi = dataSeggi.copy()
+        print(lane)
+        print(dataSeggi)
+
+
+    #----------> OUTPUT PARTITI
     
-    df = pd.DataFrame(raw_data, columns = ['NomeLista', 'Seats'])
-    df['Total_Seats'] = df['Seats'].sum()
+    dataOutput = dataset.filter(items=['Lane', 'Partito', 'Seggi'])
+    dataOutput = dataOutput.groupby(['Partito'])['Seggi'].sum().reset_index()
+    dataOutput.sort_values('Seggi', ascending = False, inplace = True)
+    dataOutput =  dataOutput.reset_index()
+    dataOutput = dataOutput.drop('index', axis=1)
 
-    dataPartitoSeggi =  dataPartitoSeggi.reset_index()
-    dataPartitoSeggi = dataPartitoSeggi.drop('index', axis=1)
-    print(dataPartitoSeggi)
+    dataOutput = dataOutput[dataOutput['Seggi']>0]
+    print(dataOutput)
 
-    plt.figure(figsize=(15,9))
-    
-    ax1 = plt.subplot(131, aspect='auto')
-    plt.pie(df['Seats'])
-    dataPartitoSeggi.plot(kind='pie', y = 'Seggi', ax=ax1, 
-     startangle=10, shadow=False, labels= dataPartitoSeggi['Partito'],legend = False, fontsize=8, autopct='%1.1f%%')
+#
+   # raw_data = {'NomeLista': dataOutput['Partito'], 
+   #     'Seats': dataOutput['Seggi']}
+   # 
+   # df = pd.DataFrame(raw_data, columns = ['NomeLista', 'Seats'])
+   # df['Total_Seats'] = df['Seats'].sum()
+#
+   #
+#
+   # #plt.figure(figsize=(15,9))
+   # plt.frame.Maximize(True)
+   # ax1 = plt.subplot(131, aspect='auto')
+#
+   # plt.pie(df['Seats'])
+   # #colors = ['#191970','#001CF0','#0038E2','#0055D4','#0071C6','#008DB8','#00AAAA','#00C69C','#00E28E','#00FF80',]
+   # dataOutput.plot(kind='pie', y = 'Seggi',ax=ax1,
+   #  startangle=10, shadow=False,  fontsize=12, autopct='%1.1f%%', title="Divisione Nazionale Camera dei Deputati")
+   #
+   # plt.legend(labels=['Sticazzi', 'ciao'],loc="upper left")
+   # 
+   # #fig = px.pie(dataOutput, values='Seggi', names='Partito', title='Divisione Nazionale Camera dei Deputati')
+   # #fig.show()
+   # #labels= dataOutput['Partito']
+#
+   # ax2 = plt.subplot(1,3,3, aspect='auto') #1 row, 2 colonne
+   # plt.axis('off')
+   # tbl = table(ax2, dataOutput, loc='center')
+   # tbl.auto_set_font_size(True)
+   # tbl.set_fontsize(100)
+   # tbl.scale(1.7, 1.7)
+   # plt.show()
 
-   
 
-    ax2 = plt.subplot(1,3,3, aspect='auto') #1 row, 2 colonne
-    plt.axis('off')
-    tbl = table(ax2, dataPartitoSeggi, loc='center')
-    tbl.auto_set_font_size(True)
-    tbl.set_fontsize(100)
-    tbl.scale(1.7, 1.7)
+
+
+    fig, ax = plt.subplots(figsize=(15, 9), subplot_kw=dict(aspect="equal"))
+
+    recipe = dataOutput['Partito']
+
+    data = dataOutput['Seggi']
+    partiti = dataOutput['Partito']
+
+
+    frame = []
+    exp = 0.01
+    for index in range(len(dataOutput)):
+        frame.append(exp)
+        exp *= 1.4
+
+
+
+
+    def func(pct, allvals):
+        absolute = int(pct/100.*np.sum(allvals))
+        return "{:.1f}%\n({:d} seats)".format(pct, absolute)
+
+
+    wedges, texts, autotexts = ax.pie(data, autopct=lambda pct: func(pct, data),
+                                      textprops=dict(color="black"), explode = frame)
+
+    ax.legend(wedges, partiti,
+              title="Partito",
+              loc="upper left",
+              bbox_to_anchor=(1.01, 0.08, 0.5, 1))
+
+    plt.setp(autotexts, size=4, weight="bold")
+
+    ax.set_title("Distribuzione Nazionale Camera dei Deputati 2013", loc='left')
+
     plt.show()
 
   
