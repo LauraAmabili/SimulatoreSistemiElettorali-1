@@ -26,5 +26,5 @@ src.run_simulation("/path/to/folder")
 
 ## Esempio
 
-`ElectoralLaws` contiene due configurazione per simulare le elezioni europee in Italia
+`ElectoralLaws` contiene due configurazioni per simulare le elezioni europee in Italia
 del 2019 e l'elezione della Camera dei Deputati del 2013 con l'utilizzo della Legge Calderoli 
