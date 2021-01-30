@@ -71,9 +71,3 @@ def distrib_europee(*a, data, seats, **kwargs):
     return data
 
 
-
-def printing_visuals(dataset) :
-
-    #printing visuals not defined for europee
-
-    return 0

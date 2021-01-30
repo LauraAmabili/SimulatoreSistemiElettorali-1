@@ -62,6 +62,7 @@ def run_simulation(path):
     final_result = src.GlobalVars.Hub.run_exec()
 
     #print(final_result)
+    
     final_visual_result = commons.printing_visuals(final_result)
 
 

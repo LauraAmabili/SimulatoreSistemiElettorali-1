@@ -2,100 +2,139 @@ Progetto di Ingegneria Informatica : **Simulatore di Sistemi Elettorali**
 
 Amabili Laura
 
-dire di installare plotly per l'output
-
-
 # Introduzione
 
 ## Obiettivo
 
-L'obiettivo del progetto è quello di realizzare un simulatore di sistemi elettorale. La parte di questo progetto che ho voluto realizzare è stata quella di ampliare il campo di leggi elettorali simulate.
-Il progetto era già stato iniziato da un altro studente e lo scopo era quello di aggiungere successivamente altre leggi elettorali necessarie. 
+L'obiettivo del progetto assegnatomi è realizzare un simulatore di sistemi elettorali.
+Partendo da quello sviluppato da un altro studente in passato, mi sono incaricata di ampliare il campo di leggi elettorali simulate con lo scopo di rendere più completo il suo lavoro.
 
-La repository che mi è stata consegnata prevedeva una struttura di base che aveva l'obiettivo di aiutare la realizzione delle leggi, infatti essa attraverso regole e sintassi prestabilite costringe a seguire uno schema ben strutturato. Questo schema di base si occupa principalmente di creare la struttura della classe, istanziare la classe con i dati, trasformandoli in un dataframe, e far partire l'esecuzione. 
-Inoltre era già stato implementato un esempio di legge elettorale, le Europee, così da poter mostrare un funzionamento di base.  
+
+Per poter implementare nuove features su una base di codice progettata da terzi, è stato necessario assecondare lo schema progettuale già esistente al fine di proseguire con uno sviluppo coerente nella forma e nei contenuti. 
+Tra i metodi ereditati dal progetto iniziale vi sono quelli relativi alla creazione della struttura della classe, l’istanziazione della classe con i dati e l'esecuzione. 
+
 
 
 
 ## La Legge Implementata
 
-Ho deciso di implementare la Legge Calderoli, nota anche come Porcellum, che venne utilizzata per l'elezioni politiche italiane nel 2006, 2008 e 2013.
-La mia decisione si è basata sulla possibilità di reperire i dati direttamente dal Ministero e sulle differenze rispetto alle elezioni Europee precedentemente implementate.
-La Legge Calderoli è infatti caratterizzata da :
-- Liste bloccate, ovvero l'elettore non può esprimere una preferenza verso un candidato
-- Presenza di coalizioni di liste
-- Presenza del premio di maggioranza
+Ho deciso di implementare la Legge Calderoli - nota anche come Porcellum - che venne utilizzata per le elezioni politiche italiane nel 2006, 2008 e 2013.
+
+
+La scelta nasce dall’esempio stimolante che il porcellum rappresenta rispetto alla legge elettorale già portata come modello. Inoltre, il poter reperire i dati direttamente dall'archivio del Ministero rappresenta certamente un valore aggiunto poiché consente di avere un campione corretto su cui basare la simulazione. 
+
+La Legge Calderoli – rispetto alle modalità di elezione delle Europee - è caratterizzata da: 
+- Liste bloccate (l'elettore non può esprimere una preferenza nei confronti di un candidato)
+- Coalizioni di liste ( raggruppamento di partiti con il fine di superare soglie di sbarramento) 
+- Premio di maggioranza ( l’incremento di seggi spettante ad una lista che ha ottenuto uno specifico risultato elettorale) 
+
+
+
+## Architettura
+
+Il codice è strutturato in modo tale da avere due principali tipologie di classi: entità politiche ed entità geografiche.
+Le prime sono utilizzate per la gestione di partiti, delle coalizioni e dei candidati e determinano chi verrà eletto.
+Le seconde hanno lo scopo di gestire e manipolare i voti per assegnare i seggi.
+
+
+Inoltre la struttura include un Hub globale per potersi riferire alle istanze delle classi e per la consultazione delle relazioni tra le esse. 
+
+
+A causa della poca duttilità delle classi preconfigurate è risultato essere preferibile l’utilizzo di un approccio a metaclassi. Le metaclassi permettono con facilità l’aggiunta di attributi e metodi alle classi da esse istanziate. Nella struttura sono presenti varie tipologie di metaclassi, ciascuna con uno scopo preciso e indipendente. La loro combinazione produce una scalabilità tale da assecondare al meglio le esigenze del progetto specifico.
 
 
 ---
+
+
 
 # Realizzazione
 
 ## Sviluppo
 
-Lo sviluppo dell'implementazione della Legge Calderoli si è svolto in quattro principali fasi :
+L'implementazione della Legge Calderoli è stata realizzata in quattro fasi: 
 
-1. **Comprensione della struttura precedentemente svilluppata.** <br> Come detto nell'introduzione mi è stato consegnato un progetto di un precedente studente, ho dovuto quindi analizzare e capire la struttura già presente per decidere come inserire nel modo più adeguato la Legge Elettorale.
-Il progetto che ho ricevuto procede in tre principali passi :
-    1. Prelevare i file di configurazione delle classi della Legge Elettorale e creare le struttura a runtime
-    2. Istanziare le classi appena create tramite altri file dedicati all'istanziazione
-    3. Iniziare l'esecuzione delle lane definite e ritorno dell'output
+1. **Studio della struttura precedentemente sviluppata.** <br> 
+Studio approfondito delle funzioni già presenti nel codice in modo tale che le parti aggiunte potessero agire in sinergia ed essere così ottimizzate al massimo. 
+ 
 
-2. **Comprendere la Legge Elettorale da implementare.** <br> Dopo aver compreso come il progetto funzionava, ho studiato più nel dettaglio come la Legge Calderoli operava ed elaborava le informazioni per cominciare ad avere un'idea dei passaggi e dei paramentri di cui avrei avuto bisogno al momento della strutturazione del progetto.
-Sono arrivata a capire che :
-	- Avrei avuto bisogno di classi dedicate per la gestione delle coalizioni e dei partiti.
-	- Avrei dovuto gestire tre diverse zone geografiche principali, l'area nazionale, la Valle D'Aosta, considerata a parte e l'Estero. Le entità geografiche della Nazione e dell'Estero sarebbero poi state divise in circoscrizioni.
-	- Nella parte dedicata alla Nazione avrei dovuto fare in modo che la Nazione stessa creasse una prima distribuzione dei seggi tra i partiti per poi usarla per la successiva correzione della distribuzione circoscrizionale dei seggi ai partiti.
-	- L'Estero gestisce la distribuzione dei seggi divisa per circoscrizioni, ovvero ogni circoscrizione prima genera la sua distribuzione dei seggi e poi la passa al livello sopra di essa, il quale una volta raccolte tutte le distribuzioni circoscrizionali unisce i seggi rispetto ai partiti e trova la distribuzione generale estera.
-	- La Valle D'Aosta sarebbe stata gestita a parte rispetto alla Nazione principale perchè avendo un collegio uninominale, a differenza delle altre regione che hanno un collegio plurinominale, esso sarebbe stato assegnato in maniera puramente proporzionale senza bisogno di correzioni e altre elaborazioni.
+2. **Comprensione della Legge Elettorale da implementare.** <br> 
+Una volta stabilito il modus operandi con cui era possibile integrare al meglio i due progetti, ho ritenuto necessario documentarmi sull'aspetto legislativo della leggi Calderoli in modo tale da simulare un'elezione nel modo più vicino possibile alla realtà.  
 
-3. **Strutturare il progetto.** <br> Dopo aver raccolto le informazioni su ciò che avevo e su quanto dovevo fare, ho cominciato la stesura della struttura del mio progetto e ho capito quali funzionalità mancanti avrei dovuto aggiungere. 
-Le scelte strutturali più importanti sono state :
-	- La scelta della gestione delle tre aree geografiche come tre lanes separate che operano in parallelo, questo mi ha permesso di dividere il lavoro in tre zone distinte che non comunicano tra loro e non si scambiano dati.
-	#TODO 
-    -La scelta di raggruppare tutti i partiti, non facenti parte di una coalizione di liste, dentro una coalizione chiamata 'NO COALIZIONE' la quale verrà gestita in modo speciale dai filtri dentro la classe coalizione. Questa scelta implementativa mi ha evitato il dover combinare più sorgenti di dati dentro ai metodi, permettendomi di prelevare tutte le informazioni cercate direttamente dalla stessa fonte.
-    
-	Le funzionalità che invece mi mancavano erano tutte quelle dedicate all'elaborazione dei voti secondo i processi della Legge Calderoli, quindi :
-	- La gestione del premio di maggioranza
-	- La correzione della distribuzione dei seggi a livello nazionale
-	- La suddivisione dei seggi di una coalizione tra i suoi partiti a livello nazionale
-	- La creazione di una distribuzione, alle coalizioni e singole liste, dei seggi tra le varie circoscrizioni
-	- La correzione della distribuzione appena sopra
-	- La suddivisione dei seggi di una coalizione tra i suoi partiti a livello circoscrizionale
-	- La correzione della distribuzione dei seggi ai partiti a livello circoscrizionale
-inoltra mancavano anche le funzionalità di gestione delle coalizioni e le funzionalità specifiche per la gestione delle soglie di sbarramento nel modo definito dalla Legge Calderoli.
+Al termine della fase di studio e documentazione è risultata chiara la necessità di utilizzare classi dedicate per la gestione delle coalizioni e dei partiti e la presenza di classi differenti per le tre zone geografiche principali: l'area nazionale, la Valle D'Aosta -  che viene considerata a parte - e l'Estero. 
+Le entità geografiche della Nazione e dell'Estero sono poi state divise in circoscrizioni.
 
-4. **Acquisizione dati e sviluppo.** <br> Dopo aver abbozzato una prima versione del progetto ho cominciato a ricercare i dati che ritenevo più utili per il testing delle funzionalità e successivamente ho iniziato lo sviluppo del codice.
+Nella prima è stato necessario far sì che la Nazione stessa creasse una prima distribuzione dei seggi tra i partiti per poter essere poi utilizzata per la successiva correzione della distribuzione circoscrizionale dei seggi ai partiti.
+
+L'Estero opera invece occupandosi della propria distribuzione dei seggi divisa per circoscrizioni: ogni circoscrizione, dopo aver generato la sua distribuzione dei seggi, la passa al livello soprastante che - una volta raccolte tutte le distribuzioni circoscrizionali - unisce i seggi rispetto ai partiti e trova la distribuzione generale estera.
+
+La Valle D'Aosta è stata invece gestita separatamente rispetto alla Nazione principale poiché, essendo caratterizzata da un collegio uninominale (a differenza del collegio plurinominale delle altre regioni), il seggio è assegnato in maniera puramente proporzionale senza la necessità di correzioni e altre elaborazioni.
+
+
+3. **Strutturare il progetto.** <br> La fase di progettazione è seguita da quella di realizzazione, che comprende delle scelte strutturali significative:  
+
+	- La decisione di gestire le tre aree geografiche come tre lanes separate che operano in parallelo. Ciò ha permesso di dividere il lavoro in tre sezioni distinte che non comunicano tra loro e non si scambiano dati.
+
+	- La decisione di raggruppare tutti i partiti, non facenti parte di una coalizione di liste, dentro una coalizione chiamata 'NO COALIZIONE', che viene gestita in modo speciale dai filtri dentro la classe coalizione. Tale scelta implementativa ha permesso di non dover combinare più sorgenti di dati dentro ai metodi, permettendomi così di prelevare tutte le informazioni cercate direttamente dalla stessa fonte.
+
+	
+	Le funzionalità implementate sono quelle atte ad elaborare i voti secondo i processi previsti dalla Legge Calderoli: 
+
+	- Gestione del premio di maggioranza
+	- Suddivisione dei seggi di una coalizione tra i suoi partiti a livello nazionale
+	-Creazione di una distribuzione, alle coalizioni e singole liste, dei seggi tra le varie circoscrizioni
+	- Suddivisione dei seggi di una coalizione tra i suoi partiti a livello circoscrizionale
+	- Correzione delle distribuzioni generate ad ogni livello 
+Inoltre, ho deciso di realizzare sia le procedure dedite alla gestione delle coalizioni sia quelle specifiche per la gestione delle soglie di sbarramento nel modo definito dalla Legge Calderoli. 
+
+
+4. **Acquisizione dati e sviluppo.** <br> Una volta realizzata la struttura del progetto ho proceduto a selezionare i dati più significativi per il testing delle funzionalità per poter poi iniziare lo sviluppo del codice secondo quanto precedentemente progettato. 
 
 
 ## Dati
 
-La ricerca dei dati è iniziata appena dopo la conclusione di una bozza della struttura per l'implementazione della Legge Elettorale.
-I dati li ho reperiti dal sito dell'archivio nazionale del ministero e ho deciso che avrei utilizzato quelle delle elezioni della Camera dei Deputati per l'anno 2013.
-Una volta acquisiti tutti i dati disponibili sulle votazioni, li ho filtrati in base a quelli che ritenevo indispensabili e utili per la realizzazione della mia implementazione, strutturandoli in maniera adeguata.
--coerenti con le limitazioni, la prima colonna non è accessibile
+I dati sono disponibili sul sito dell'archivio azionale del ministero ho selezionato quelli delle elezioni della Camera dei Deputati per l'anno 2013.
+
+Dopo aver acquisito i dati è stata necessaria una pulizia con lo scopo di renderli compatibili e adeguati alla mia implementazione.
+
+<br>
+
+Nello specifico le limitazioni riscontrate non mi permettevano di accedere alla prima colonna dei dati poichè usata per indicizzazione.
+Nei miei dati questa specifica colonna era usata per l'identificazione della circoscrizione da cui provenivano i voti, informazione per me basilare e che ho quindi ho ritenuto necessario duplicare aggiungendo una seconda colonna contenente la regione di derivazione.
+
+QUI
 
 
-Ho deciso di mantenere tre diverse categorie di dati :
+L'elaborazione finale prevedeva la suddivisione in tre diverse categorie catalogate secondo specificii path: 
+
 1. I dati a livello regionale delle votazioni ai singoli partiti nella Nazione
 2. I dati a livello circoscrizionale delle votazioni ai singoli partiti all'Estero
 3. I dati della Valle D'Aosta ai singoli pariti
 
-Ho quindi suddiviso i dati nelle rispettive cartelle di destinazione.
+Ho quindi suddiviso i dati nelle rispettive cartelle di destinazione. 
 
 
-## Problemi
+## Problematiche
 
-Il percorso di sviluppo non è certo stato privo di difficoltà. Le principali sono state:
 
-1. **Comprensione del codice e della struttura.**<br> Lavorare su del codice sviluppato da un'altra persone non è facile, una cosa che non ha facilitato questa parte è il fatto che lo studente prima di me ha strutturato il codice basandosi sulle metaclasse per poi creare a runtime la struttura per la legge elettorale. Questo ha reso la comprensione del flow dei dati e anche il debugging del codice molto ardui.
-    - *Risoluzione* : Ho dovuto dedicare molto più tempo di quel che avevo programmato per l'analisi di come i dati venivano elaborati e di come le classi venivano inizialmente configurate.
+Durante lo sviluppo ho incontrato alcune criticità:  
 
-2. **Utilizzo della sintassi usata per la creazioni di classe personalizzate.**<br>Il progetto presentava una struttura di base per la creazione delle configurazioni delle classi attraverso l'utilizzo di file .yaml. La comprensione della sintassi, non completamente documentata, ha reso limitante la possibilità di sfruttare al meglio questo strumento e utilizzarlo al suo potenziale ottimale. 
-    - *Risoluzione* : Testing e prove sono stati passi fondamentali. Ho dovuto modificare diverse volte alcune configurazioni delle classi e i rispettivi parametri d'inizializzazione ed elaborare i diversi output per maneggiare questa funzionalità.
 
-3. **Traduzione in codice della Legge Elettorale.**<br> Per la corretta e completa implementazione della Legge Elettorale ho dovuto approfondire il procedimento, sono quindi andata a consultare il testo originale tramite il sito della Camera. Alcune parti mi hanno dato più difficoltà nell'implementazione a causa della loro complessa procedura di manipolazione dei dati, particolare attenzione ho dovuto porre nella suddivisione dei seggi tra le varie circoscrizioni nazionali.
-    - *Risoluzione* : Ho dovuto modificare più volte alcune configurazioni di classi per permettere di passare informazioni aggiuntive ai livelli inferiori per una più agevole procedura ed elaborazione.
+1. **Comprensione del codice e della struttura.**<br> 
+
+
+Inizialmente ho riscontrato delle difficoltà ad operare su codice non da me sviluppato. In particolare la presenza di metaclassi e la conseguente creazione a runtime della struttura non mi ha permesso di comprendere immediatamente la struttura globale. 
+
+    - *Risoluzione* : Nonostante il tempo impiegato, un’attenta analisi di come i dati fossero elaborati e di come le classi venissero inizialmente configurate ha aiutato ad avere chiara l’esecuzione. 
+
+
+2. **Utilizzo della sintassi usata per la creazioni di classe personalizzate.**<br> Durante questo progetto mi sono resa conto dell’importanza di documentare il codice prodotto. Il progetto precedente utilizzava file .yaml come struttura di base per la creazione delle configurazioni delle classi. Questi file richiedevano regole di produzione la quale comprensione parziale avrebbe reso limitante la possibilità di sfruttare al meglio lo strumento. 
+
+    - *Risoluzione* : Testing e simulazione sono stati step fondamentali al fine di assicurarmi che il progetto fosse consistente. Infatti ho impiegato una buona percentuale di tempo ad assicurarmi che i campi inseriti fossero corretti, confrontando e alterando l’output. 
+ 
+
+3. **Traduzione in codice della Legge Elettorale.**<br> Per una corretta e completa implementazione della legge elettorale ho dovuto approfondire il procedimento secondo cui opera tale legge. Sono quindi andata a consultare il testo originale tramite il sito della Camera. Alcune parti hanno reso necessaria una complessa procedura di manipolazione dei dati. Si è resa necessaria particolare attenzione nella suddivisione dei seggi. 
+
+    - *Risoluzione* : Per una più agevole procedura ed elaborazione ho dovuto configurare in maniera differente alcune classi cosi che le informazioni aggiuntive passassero ai livelli inferiori. 
 
 
 ---
@@ -105,55 +144,66 @@ Il percorso di sviluppo non è certo stato privo di difficoltà. Le principali s
 ## Output
 
 Il programma genera un duplice output, testuale e visivo. <br>
-L'output testuale è formattato in modo da essere una lista di gruppo d'informazioni.
-Ogni singolo gruppo d'informazioni conterrà :
+L'output testuale è formattato in modo da essere una lista di tuple d'informazioni.
+Ogni tupla conterrà :
 - Nome della circoscrizione
 - Nome della lane
 - Nome del partito
-- Numero dei seggi ricevuti nella circoscrizione della lane specificate
+- Numero dei seggi ricevuti nella circoscrizione della lane specificata
 
-Per l'output visivo invece volevo una rappresentazione più semplice dei risultati, ma comunque efficace. La mia scelta è quindi ricaduta su un grafico a torta il quale rende immediata la comprensione della distribuzione in percentuale dei seggi.
-Per sapere invece l'effettivo numero di seggi assegni ai singoli partiti ho inserito anche una tabella contenente il nome del partito e il numero dei seggi a lui assegnati.
+Per l'output visivo ho invece ritenuto opportuna una rappresentazione più semplice dei risultati. La mia scelta è quindi ricaduta su un pie chart in grado di rendere immediata la comprensione della distribuzione in percentuale dei seggi.
 
-Le immagini qua sotto sono invece state generate per scopo puramente illustrativo della relazione.
+![image](Immagini/FigureDefinitiva.png)
+
+
+
+''' 
+Le immagini di seguito riportate sono invece state generate per scopo puramente illustrativo della relazione.
 Purtroppo la libreria utilizzata non riusciva a generare una visualizzazione di questo tipo.
 
-![image](Immagini/Rappresentazione_Seggi_617.png)
-![image](Immagini/Rappresentazione_Seggi_630.png)
-
+![image](Immagini/Rappresentazione_Camera_617.png)
+![image](Immagini/Rappresentazione_Camera_630.png)
  
-## Limitazioni
 
 
+## Utilizzo e Configurazione
 
-## Utilizzo
+Per il corretto funzionamento della simulazione è necessario avere una directory con una specifica configurazione di subdirectory e file.
 
-Per il corretto funzionamento della simulazione è necessario avere una cartella con una specifica configurazione di sottocartelle e file.
+La root dovrà contenere differenti folders:
+- *Classes* : deve avere al suo interno appositi file di tipo .yaml o .py per la configurazione della struttura delle classi necessarie per la simulazione.
+- *Data* : deve contenere al suo interno subfolders aventi lo stesso nome delle classi che attingono ai dati contenuti nell'omonima cartella.
+- *Instances* : deve contenere al suo interno file .yaml contenenti i valori dei parametri delle varie istanze di ogni classe presente in Classes.
 
-La cartella principale dovrà contenere appunto le seguenti cartelle :
-- *Classes* : La quale dovrà avere al suo interno una serie di file .yaml o .py per la configurazione della struttura delle classe necessarie per la simulazione.
-- *Data* : la quale dovrà contenere al suo interno altre cartelle aventi lo stesso nome delle classi che attingeranno ai dati contenuti nell'omonima cartella.
-- *Instances* : la quale conterrà dei file .yaml contenenti i valori dei parametri delle varie istanze di ogni singola classe.
+Dopo aver creato gli appositi file di configurazione delle classi è necessario formare i file atti ad istanziarli.
+Per ogni singola classe deve corrispondere, all’interno di “Instances”, un file che ha la struttura di un dizionario da cui vengono prelevate le chiavi usate come nome delle varie istanze. 
+Il valore associato alle chiavi è un dizionario avente per chiavi i nomi dei parametri della classe e per valore il valore da associare al parametro stesso. 
 
-Quindi nel caso di Circoscrizione_Estera avrò un file in Classes/Circoscrizione_Estera.yaml che creerà la struttura della classe definendo i parametri e i metodi, un file in Instances/Circoscrizione_Estera.yaml che riempirà i parametri delle varie istanze e una cartella Data/Circoscrizione_Estera al cui interno avrà dei file .csv aventi lo stesso nome della funzione che userà questo file per il recupero dei dati.
 
-Per esempi di configurazione di questi file rifarsi ad altri file della documentazione.
+Per il passaggio dei dati alle classi è necessario creare all’interno di  ```Data``` una subdirectory avente lo stesso nome della classe destinazione. Al suo interno vengono successivamente salvati i file .csv reperiti dalle appropriate fonti . 
 
-Una volta configurata la cartella bisogna eseguire la simulazione usando i seguenti comandi in una console di python :
+Ogni file sopracitato ha il nome della funzione chiamante, come ad esempio ```Data/Nome_Classe/Nome_Funzione_Chiamante.csv```.
+Nei file inerenti ai dati citati precedentemente la prima colonna è utilizzata per la divisione dei dati.
+
+
+Per esempi di configurazione di questi file rifarsi all'apposita documentazione : [Configurazione]
+
+
+Una volta configurata la cartella è possibile eseguire la simulazione usando i seguenti comandi in una console di python :
 
 ```python
 import src
 src.run_simulation("/path/to/folder")
 ```
 
-oppure questo comando direttamente da terminale :
+in alternativa, questo comando da terminale :
 
 ```shell
 python -m src /path/to/folder
 ```
 
-Nel caso si volesse implementare un'ulteriore Legge Elettorale consiglio la creazione di un file dedicato nella cartella src/Commons contenente metodi specifici per l'elaborazione delle distribuzioni ed eventuali correzione previste dalla Legge Elettorale d'interesse.
-Io stessa ho creato il file Porcellum.py in cui ho inserito tutte le funzionalità di cui avevo bisogno.
+Nel caso si volesse implementare un'ulteriore Legge Elettorale, consiglio la creazione di un file dedicato nella cartella src/Commons contenente metodi specifici per l'elaborazione delle distribuzioni ed eventuali correzioni previste dalla Legge Elettorale d'interesse.
+
 
 
 ---
@@ -162,7 +212,11 @@ Io stessa ho creato il file Porcellum.py in cui ho inserito tutte le funzionalit
 
 ## Idee
 
-1. Tra gli sviluppi futuri più facili da immaginare c'è sicuramente l'implementazione di ulteriori Leggi Elettorali, in modo da rendere il più ampio possibile lo scenario di simulazione. L'ampliamento della disponibilità di leggi elettorali renderebbe possibili anche i confronti con altri risultati.
+1. Tra gli sviluppi futuri più significativi c'è sicuramente l'implementazione di ulteriori Leggi Elettorali. In questo modo lo scenario di simulazione sarebbe più ampio e renderebbe possibile anche il contronto tra i risultati ottenuti da leggi elettorali differenti.  
 
 
 
+
+
+
+[Configurazione]:</Users/lauraamabili/Desktop/Polimi/SimulatoreSistemiElettorali-1/Documentazione/Consegna/Configurazione.md>

@@ -711,9 +711,13 @@ def correct_porcellum_estero(distretto, distribuzione_ideale, distribuzione_racc
 
 def printing_visuals(lista) :
 
-
-    dataset = pd.DataFrame(lista, columns =['Circoscrizione', 'Lane', 'Partito', 'Seggi'])
-    dataset['Seggi'] = dataset['Seggi'].astype(int)
+    
+    try: 
+        dataset = pd.DataFrame(lista, columns =['Circoscrizione', 'Lane', 'Partito', 'Seggi'])
+        dataset['Seggi'] = dataset['Seggi'].astype(int)
+    except: 
+        print('Dati non formattati per output visuale')
+        return 0 
 
     listaLane = dataset['Lane'].unique()
     print(listaLane)
