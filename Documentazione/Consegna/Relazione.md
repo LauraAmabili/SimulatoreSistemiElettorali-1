@@ -78,13 +78,14 @@ La Valle D'Aosta è stata invece gestita separatamente rispetto alla Nazione pri
 
 	
 	Le funzionalità implementate sono quelle atte ad elaborare i voti secondo i processi previsti dalla Legge Calderoli: 
-
 	- Gestione del premio di maggioranza
 	- Suddivisione dei seggi di una coalizione tra i suoi partiti a livello nazionale
 	-Creazione di una distribuzione, alle coalizioni e singole liste, dei seggi tra le varie circoscrizioni
 	- Suddivisione dei seggi di una coalizione tra i suoi partiti a livello circoscrizionale
 	- Correzione delle distribuzioni generate ad ogni livello 
 Inoltre, ho deciso di realizzare sia le procedure dedite alla gestione delle coalizioni sia quelle specifiche per la gestione delle soglie di sbarramento nel modo definito dalla Legge Calderoli. 
+Queste funzionalità sono implementate nel file dedicato nella directory src/Commons/porcellum.py. 
+
 
 
 4. **Acquisizione dati e sviluppo.** <br> Una volta realizzata la struttura del progetto ho proceduto a selezionare i dati più significativi per il testing delle funzionalità per poter poi iniziare lo sviluppo del codice secondo quanto precedentemente progettato. 

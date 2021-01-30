@@ -17,7 +17,6 @@ Eseguire in questa cartella:
 ```shell script
 python -m src /path/to/folder_nome_legge
 ```
-
 o in una console python:
 
 ```python
@@ -27,5 +26,5 @@ src.run_simulation("/path/to/folder")
 
 ## Esempio
 
-`ExampleDeliveri` contiene la configurazione per simulare le elezioni europee in Italia
-del 2019 
+`ElectoralLaws` contiene due configurazione per simulare le elezioni europee in Italia
+del 2019 e l'elezione della Camera dei Deputati del 2013 con l'utilizzo della Legge Calderoli 

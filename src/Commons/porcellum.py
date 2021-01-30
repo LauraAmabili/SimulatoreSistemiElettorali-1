@@ -58,7 +58,7 @@ def distrib_porcellum(*a, data, seats, df_partiti_filtrato, df_partiti_regioni, 
     # e che verranno assegnati con i resti #
     r = seats - df_eleggibili['Seats'].sum()
 
-    # qua ordino i partiti in base al resto
+    # qui ordino i partiti in base al resto
     df_eleggibili.sort_values('Remainder', ascending=False, inplace=True)
 
     # assegno i seggi rimanenti
@@ -72,14 +72,14 @@ def distrib_porcellum(*a, data, seats, df_partiti_filtrato, df_partiti_regioni, 
     # allora glieli assegno automaticamente #
 
     # in questa parte vado ad assegnare il premio di maggioranza al
-    # partito che ha preso piu voti, ma solo se non ha raggiunti i 340 seggi
+    # partito che ha preso piu voti, ma solo se non ha raggiunto i 340 seggi
     if df_eleggibili.iloc[0, df_eleggibili.columns.get_loc('Seats')] < premio_maggioranza :
        
 
         df_eleggibili.iloc[0, df_eleggibili.columns.get_loc('Seats')] = premio_maggioranza
 
         # Q è la somma di tutti i voti diviso per il numero di seggi generali
-        #data2 = data.copy()
+        
         df_eleggibili_2 = df_eleggibili.iloc[1:]
 
         remainingSeats = seats - df_eleggibili.iloc[0, df_eleggibili.columns.get_loc('Seats')].item()
@@ -216,7 +216,7 @@ def dividi_per_partiti(df_eleggibili, df_partiti, df_coalizioni):
     # END-FOR
     df_distribuzione_finale = pd.concat(frame)
 
-    # tolto e rinnomino colonne # 
+    # tolto e rinomino colonne # 
     df_distribuzione_finale = df_distribuzione_finale.drop(['Remainder', 'RemainderUsed'], axis=1)
     df_distribuzione_finale = df_distribuzione_finale.rename({'Eleggibile': 'Partito'}, axis=1)
 
@@ -256,8 +256,8 @@ def divisione_circoscrizionale_seggi(*, information, distribution, district_vote
     # 
     # contiene il numero di voti presi a livello nazionale da ogni partito #
 
-    # cosa fare
-    # allora devo identificare la coalizione/partito di maggioranza
+    # 
+    # devo identificare la coalizione/partito di maggioranza
     # calcolare il suo numero di voti nazionali e poi il quoziente nazionale di maggioranza
     # 
     # poi per i partiti di minoranza devo calcolare un unico quoziente nazionale di minoranza #
@@ -664,7 +664,7 @@ def correct_porcellum_partiti(distretto, distribuzione_ideale, distribuzione_rac
     # devo ritornare solo la distribuzione, niente altre informazioni #
     ret = distribuzione_raccolta, {}, {}
 
-    # print per una decente visualizzazione della distribuzione finale #
+    # print per una ordinata visualizzazione della distribuzione finale #
     for circ, distr in ret[0].items() :
         print(circ)
         print(distr)
@@ -750,41 +750,6 @@ def printing_visuals(lista) :
     dataOutput = dataOutput[dataOutput['Seggi']>0]
     print(dataOutput)
 
-#
-   # raw_data = {'NomeLista': dataOutput['Partito'], 
-   #     'Seats': dataOutput['Seggi']}
-   # 
-   # df = pd.DataFrame(raw_data, columns = ['NomeLista', 'Seats'])
-   # df['Total_Seats'] = df['Seats'].sum()
-#
-   #
-#
-   # #plt.figure(figsize=(15,9))
-   # plt.frame.Maximize(True)
-   # ax1 = plt.subplot(131, aspect='auto')
-#
-   # plt.pie(df['Seats'])
-   # #colors = ['#191970','#001CF0','#0038E2','#0055D4','#0071C6','#008DB8','#00AAAA','#00C69C','#00E28E','#00FF80',]
-   # dataOutput.plot(kind='pie', y = 'Seggi',ax=ax1,
-   #  startangle=10, shadow=False,  fontsize=12, autopct='%1.1f%%', title="Divisione Nazionale Camera dei Deputati")
-   #
-   # plt.legend(labels=['Sticazzi', 'ciao'],loc="upper left")
-   # 
-   # #fig = px.pie(dataOutput, values='Seggi', names='Partito', title='Divisione Nazionale Camera dei Deputati')
-   # #fig.show()
-   # #labels= dataOutput['Partito']
-#
-   # ax2 = plt.subplot(1,3,3, aspect='auto') #1 row, 2 colonne
-   # plt.axis('off')
-   # tbl = table(ax2, dataOutput, loc='center')
-   # tbl.auto_set_font_size(True)
-   # tbl.set_fontsize(100)
-   # tbl.scale(1.7, 1.7)
-   # plt.show()
-
-
-
-
     fig, ax = plt.subplots(figsize=(15, 9), subplot_kw=dict(aspect="equal"))
 
     recipe = dataOutput['Partito']
@@ -798,9 +763,6 @@ def printing_visuals(lista) :
     for index in range(len(dataOutput)):
         frame.append(exp)
         exp *= 1.4
-
-
-
 
     def func(pct, allvals):
         absolute = int(pct/100.*np.sum(allvals))
@@ -821,6 +783,5 @@ def printing_visuals(lista) :
 
     plt.show()
 
-  
 
     return 0
